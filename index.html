@@ -647,7 +647,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="15";
+const APPV="16";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
@@ -663,6 +663,16 @@ async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){to
       doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(13,27,42);doc.text(l,M,y+4);y+=6;
       doc.setDrawColor(190,200,212);doc.setFillColor(247,249,251);doc.roundedRect(M,y,CW,bh,1.5,1.5,"FD");
       doc.setFont("helvetica","normal");doc.setTextColor(v==="NIL"?130:13,v==="NIL"?140:27,v==="NIL"?150:42);doc.text(lines,M+4,y+6);doc.setTextColor(13,27,42);y+=bh+5});y+=4});
+  const used=allT().filter(t=>((d.checks||{})[t.id]||[]).length);
+  if(used.length){page(18);doc.setFillColor(15,27,41);doc.roundedRect(M,y,CW,9,1.5,1.5,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("CHECKLISTS",M+4,y+6.2);y+=14;
+    used.forEach(t=>{const it=items(t),c=(d.checks||{})[t.id]||[],n=it.filter(i=>c.includes(i.id)).length;page(14);
+      const hx=t.c.replace("#","");doc.setFillColor(parseInt(hx.slice(0,2),16),parseInt(hx.slice(2,4),16),parseInt(hx.slice(4,6),16));doc.rect(M,y-0.5,2.2,6,"F");
+      doc.setTextColor(13,27,42);doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.text(t.t,M+5,y+4);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(100,110,120);doc.text(`${n}/${it.length}${n===it.length?"  -  concluída":""}`,W-M,y+4,{align:"right"});y+=8;
+      it.forEach(i=>{const on=c.includes(i.id);doc.setFontSize(9.5);const lines=doc.splitTextToSize(i.t,CW-12);const h=lines.length*4.6+1.6;page(h);
+        doc.setDrawColor(120,130,140);doc.setLineWidth(0.3);doc.rect(M+5,y,3.6,3.6);
+        if(on){doc.setDrawColor(11,92,173);doc.setLineWidth(0.6);doc.line(M+5.7,y+1.9,M+6.6,y+2.9);doc.line(M+6.6,y+2.9,M+8.1,y+0.7);doc.setLineWidth(0.2)}
+        doc.setTextColor(on?13:110,on?27:120,on?42:130);doc.setFont("helvetica","normal");doc.text(lines,M+11,y+3);y+=h});
+      y+=4})}
   doc.setFontSize(8);doc.setTextColor(120,130,140);doc.text("Gerado em "+new Date().toISOString().slice(0,16).replace("T"," ")+" UTC · OCC Diário",M,290);
   const name=`RDO_${d.date}.pdf`,blob=doc.output("blob"),file=new File([blob],name,{type:"application/pdf"});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})&&matchMedia("(pointer:coarse)").matches){await navigator.share({files:[file],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
