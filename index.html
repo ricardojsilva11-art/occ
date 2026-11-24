@@ -37,7 +37,7 @@ button{cursor:pointer;border:0;background:none}
 .sync{font-size:12px;opacity:.8;white-space:nowrap}
 .sync i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-inline-end:5px}
 .sync.on i{background:#34d399}
-.wrap{max-width:1240px;margin:auto;padding:18px max(4vw,14px) 48px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
+.wrap{max-width:1240px;margin:auto;padding:18px max(4vw,14px) 48px;display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
 @media(max-width:920px){.wrap{grid-template-columns:minmax(0,1fr)}}
 .card{background:var(--card);border-radius:16px;box-shadow:var(--sh);border:1px solid var(--line)}
 /* calendar */
@@ -46,9 +46,13 @@ button{cursor:pointer;border:0;background:none}
 .ch h2{margin:0;flex:1;font-size:clamp(20px,5vw,26px);line-height:1.1}
 .ib{width:44px;height:44px;border-radius:12px;background:var(--card2);font-size:20px;display:grid;place-items:center}
 .pill{height:44px;padding:0 14px;border-radius:12px;background:var(--card2);font-weight:600;font-size:15px}
-.wd,.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.wd{display:none}
+.days{display:flex;gap:5px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.day .wk{font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase}
+.day.we{background:color-mix(in srgb,var(--acc) 7%,var(--card2))}
+.day.we .wk{color:var(--acc)}
 .wd span{font-size:12px;font-weight:600;color:var(--mute);text-align:center;padding:4px 0}
-.day{position:relative;aspect-ratio:1/1.05;border-radius:12px;background:var(--card2);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 2px;font-weight:600;font-size:15px;border:2px solid transparent;transition:transform .12s}
+.day{position:relative;flex:1 0 30px;min-height:88px;scroll-snap-align:center;gap:4px;border-radius:12px;background:var(--card2);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 2px;font-weight:600;font-size:15px;border:2px solid transparent;transition:transform .12s}
 .day:hover{transform:translateY(-1px)}
 .day.out{opacity:.35}
 .day.today .n{background:var(--ink);color:var(--card);border-radius:8px;padding:0 6px}
@@ -184,7 +188,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .mp.need{border-color:#f59e0b;background:color-mix(in srgb,#f59e0b 7%,var(--card))}
 .mph{display:flex;align-items:center;gap:8px;margin-bottom:8px}.mph small{color:var(--mute)}
 .mp .sb{height:38px;min-width:0;font-size:13px}
-@media(max-width:600px){.top h1 small{display:none}.sync{font-size:11px}}
+@media(max-width:600px){.day{flex:0 0 46px}.top h1 small{display:none}.sync{font-size:11px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -299,13 +303,13 @@ const doneOf=(d,t)=>{const c=(d.checks||{})[t.id]||[];return items(t).filter(i=>
 function renderCal(){
   const y=month.getFullYear(),m=month.getMonth();
   {const t=month.toLocaleDateString("pt-PT",{month:"long"});$("#mon").textContent=t.charAt(0).toUpperCase()+t.slice(1)+" "+y}
-  const first=new Date(y,m,1),off=(first.getDay()+6)%7,start=new Date(y,m,1-off);
-  let h="";for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);
-    if(i>=35&&d.getMonth()!==m)break;
+  const nd=new Date(y,m+1,0).getDate(),WK=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  let h="";for(let i=1;i<=nd;i++){const d=new Date(y,m,i);
     const k=key(d),D=days[k],s=D&&SK[D.shift];
-    h+=`<button class="day${d.getMonth()!==m?" out":""}${k===todayK?" today":""}${k===sel?" sel":""}" data-k="${k}" aria-label="${d.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"})}${s?", "+s.n:""}">
-      <span class="n">${d.getDate()}</span>${s?`<span class="chip" style="--c:var(--${s.k})">${esc((D.code||s.k).slice(0,4))}</span>`:`<span class="chip empty"></span>`}${hasRep(D)?`<i class="dot" title="Com RDO"></i>`:""}</button>`}
+    h+=`<button class="day${d.getDay()%6===0?" we":""}${k===todayK?" today":""}${k===sel?" sel":""}" data-k="${k}" aria-label="${d.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"})}${s?", "+s.n:""}">
+      <span class="wk">${WK[d.getDay()]}</span><span class="n">${d.getDate()}</span>${s?`<span class="chip" style="--c:var(--${s.k})">${esc((D.code||s.k).slice(0,4))}</span>`:`<span class="chip empty"></span>`}${hasRep(D)?`<i class="dot" title="Com RDO"></i>`:""}</button>`}
   $("#days").innerHTML=h;
+  {const st=$("#days"),se=st.querySelector(".sel")||st.querySelector(".today");if(se)st.scrollLeft=se.offsetLeft-st.clientWidth/2+se.clientWidth/2-st.offsetLeft}
   $("#legend").innerHTML=`<span style="font-size:13px;color:var(--mute);margin-inline-end:2px">Preencher escala:</span>`+ST.map(s=>`<button class="lg${paint===s.k?" on":""}" data-p="${s.k}" style="--c:var(--${s.k})"><span class="chip" style="--c:var(--${s.k})">${s.k}</span>${s.n}</button>`).join("")+`<button class="lg${paint==="-"?" on":""}" data-p="-" style="--c:var(--mute)">Apagar</button>`;
   const pt=$("#paint");pt.classList.toggle("on",!!paint);
   pt.innerHTML=paint?`Toque nos dias para marcar <b>${paint==="-"?"sem turno":esc(SK[paint].n)}</b>. <button class="pill" id="pdone" style="height:34px;margin-inline-start:6px">Terminar</button>`:"";
