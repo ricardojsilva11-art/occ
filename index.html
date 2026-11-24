@@ -213,6 +213,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
     <div class="ch">
       <button class="ib" id="prev" aria-label="Semana anterior">‹</button>
       <h2 id="mon">—</h2>
+      <label class="ib" title="Ir para uma data" style="position:relative;cursor:pointer"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><input type="date" id="goto" aria-label="Ir para uma data" style="position:absolute;inset:0;opacity:0;cursor:pointer;min-height:0;padding:0;border:0"></label>
       <button class="pill" id="today">Hoje</button>
       <button class="ib" id="next" aria-label="Semana seguinte">›</button>
     </div>
@@ -365,6 +366,7 @@ function chkPane(d){
 function render(){renderCal();renderDay()}
 const _rd=renderDay;renderDay=function(){_rd();document.querySelectorAll("[data-rep]").forEach(fit)};
 /* events */
+$("#goto").addEventListener("change",e=>{const v=e.target.value;if(!v)return;sel=v;chk=null;winStart=addD(fromKey(v),-1);render();$("#days").scrollLeft=0;e.target.value=""});
 $("#prev").onclick=()=>{winStart=addD(winStart,-7);renderCal()};
 $("#next").onclick=()=>{winStart=addD(winStart,7);renderCal()};
 $("#today").onclick=()=>{winStart=addD(fromKey(todayK),-1);sel=todayK;render();$("#days").scrollLeft=0};
@@ -636,7 +638,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="9";
+const APPV="10";
 function fixHours(){const def={M:["06:30","15:00"],T:["14:45","23:15"],N:["23:00","07:00"]},old=[["07:00","15:00"],["15:00","23:00"]];
   Object.keys(days).forEach(dk=>{const d=days[dk];if(!def[d.shift]||(d.code&&KNOWN[String(d.code).toUpperCase()]))return;const mine=hoursOf(d.shift);
     const wrong=ST.some(x=>x.h&&x.k!==d.shift&&(()=>{const h=hoursOf(x.k);return d.start===h[0]&&d.end===h[1]})())||old.some(h=>d.start===h[0]&&d.end===h[1]&&!(mine[0]===h[0]&&mine[1]===h[1]));
