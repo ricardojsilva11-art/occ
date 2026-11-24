@@ -668,6 +668,7 @@ function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-
   <p style="margin:6px 0 0">Use este código para entrar noutros dispositivos. Não o partilhe — quem o tiver vê os seus dados.</p></div>
   <div class="fld"><label>Sincronização</label><p style="margin:0">${live?"Ligado":"Sem ligação"} · última ${ls} · ${dirty.size} alteração(ões) por enviar</p></div>
   <div class="fld"><label>Instalar no ecrã principal</label><p style="margin:0">iPhone: Safari → Partilhar → “Adicionar ao ecrã principal”. PC: Chrome/Edge → ícone de instalar na barra de endereço. Depois funciona sem rede.</p></div>
+  <div class="fld"><label for="pnm">O seu nome (aparece no título do PDF)</label><input id="pnm" value="${esc(cfg.pname||"")}" placeholder="Ex.: Ricardo" maxlength="40"></div>
   <div class="fld"><label>Horário de cada turno</label>${ST.filter(x=>x.h).map(x=>{const h=hoursOf(x.k);return `<div class="hrs" style="margin-top:6px"><b style="width:64px;color:var(--ink)">${x.n}</b><input type="time" data-dh="${x.k}|0" value="${h[0]}" aria-label="${x.n} início"> até <input type="time" data-dh="${x.k}|1" value="${h[1]}" aria-label="${x.n} fim"></div>`}).join("")}
   <p style="margin:6px 0 0">Usado quando marca um turno. Ao mudar, os dias de hoje em diante com o horário antigo também mudam.</p></div>
   <div class="fld"><label for="cy">Apagar turnos importados de um ano</label><div style="display:flex;gap:8px"><select id="cy" class="sel">${[-1,0,1,2].map(k=>`<option${k===0?" selected":""}>${new Date().getFullYear()+k}</option>`).join("")}</select><button class="btn sec" id="cyb" style="flex:none;color:#dc2626">Apagar turnos</button></div><p style="margin:6px 0 0">Só apaga os turnos da escala; o RDO e as checklists ficam.</p></div>
@@ -683,7 +684,8 @@ mbox.addEventListener("click",async e=>{const id=e.target.id;
     ks.forEach(k=>edit(k,d=>{d.shift="";d.code="";d.start="";d.end=""}));render();closeM();toast(ks.length+" turnos de "+y+" apagados")}
   if(id==="sout"){if(dirty.size&&!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent="Há dados por enviar — tocar outra vez para sair";return}
     try{localStorage.removeItem(LK);localStorage.removeItem("occ-key")}catch(_){}KEY="";cfg={extra:{}};days={};dirty=new Set();closeM();render();showLogin()}});
-mbox.addEventListener("change",e=>{const dh=e.target.dataset.dh;if(dh&&e.target.value){const [k,i]=dh.split("|");const old=hoursOf(k),nh=old.slice();nh[+i]=e.target.value;
+mbox.addEventListener("change",e=>{if(e.target.id==="pnm"){cfg.pname=e.target.value.trim().slice(0,40);saveCfg();toast("Nome guardado");return}
+  const dh=e.target.dataset.dh;if(dh&&e.target.value){const [k,i]=dh.split("|");const old=hoursOf(k),nh=old.slice();nh[+i]=e.target.value;
     cfg.hours=cfg.hours||{};cfg.hours[k]=nh;saveCfg();let n=0;Object.keys(days).forEach(dk=>{const d=days[dk];if(dk>=todayK&&d.shift===k&&d.start===old[0]&&d.end===old[1]){edit(dk,x=>{x.start=nh[0];x.end=nh[1]});n++}});render();toast(n?`Horário atualizado em ${n} dia(s)`:"Horário guardado");return}
   if(e.target.id==="sapi"){API=e.target.value.trim()||API_DEF;try{localStorage.setItem("occ-api",API)}catch(_){}sync()}});
 const lg=$("#login");
@@ -692,12 +694,12 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="18";
+const APPV="19";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
   doc.setFillColor(11,42,74);doc.rect(0,0,W,30,"F");doc.setTextColor(255,255,255);
-  doc.setFont("helvetica","bold");doc.setFontSize(20);doc.text("RDO",M,14);
+  doc.setFont("helvetica","bold");doc.setFontSize(20);doc.text("RDO"+(cfg.pname?" - "+String(cfg.pname).toUpperCase():""),M,14);
   doc.setFontSize(12);doc.text(dt.toLocaleDateString("pt-PT"),W-M,14,{align:"right"});
   doc.setFont("helvetica","normal");doc.setFontSize(10);doc.text(dl.charAt(0).toUpperCase()+dl.slice(1),M,22);
   if(s)doc.text(`${s.n}${d.code?" ("+d.code+")":""}${d.start?"  "+d.start+" - "+d.end:""}`,W-M,22,{align:"right"});
