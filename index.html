@@ -241,7 +241,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 const ST=[{k:"M",n:"Manhã",h:["06:30","15:00"]},{k:"T",n:"Tarde",h:["14:45","23:15"]},{k:"N",n:"Noite",h:["23:00","07:00"]},{k:"F",n:"Folga"},{k:"V",n:"Férias"}];
 const SK=Object.fromEntries(ST.map(s=>[s.k,s]));
 const hoursOf=k=>SK[k]?.h?((cfg.hours&&cfg.hours[k])||SK[k].h).slice():null;
-const RDO=[{h:"SHIFT MANAGER",f:[["wx","WX/HLD"],["rgzfw","RGZFW"],["div","Diverted Flights"],["fuel","Fueled Aircraft"],["sys","System failures"]]},{h:"ATC MANAGEMENT",f:[["fl","ATC FL Capping"],["atfcm","ATFCM Regulations"],["oth","Others"]]}];
+const RDO=[{h:"SHIFT MANAGER",f:[["wx","WX/HLD"],["rgzfw","RGZFW"],["div","Diverted Flights"],["fuel","Fueled Aircraft"],["sys","System failures"],["smoth","Others"]]},{h:"ATC MANAGEMENT",f:[["fl","ATC FL Capping"],["atfcm","ATFCM Regulations"],["oth","Others"]]}];
 const TPL=[
 {id:"ini",g:"Turno",t:"Início de turno",c:"#f59e0b",ic:"sun",i:["Briefing com DM cessante","Log OCC lido","Pendentes identificados","Frota / AOG / MEL revistos","Spares e reservas de tripulação","Meteo e NOTAM revistos","ATFM / slots verificados","Curfews em risco identificados"]},
 {id:"rot",g:"Turno",t:"Rotina horária",c:"#0ea5e9",ic:"clock",i:["Atrasos / OTP","CTOT vs EOBT","Flight watch","Margens FTL","Log OCC atualizado"]},
@@ -639,7 +639,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="11";
+const APPV="12";
 function fixHours(){const def={M:["06:30","15:00"],T:["14:45","23:15"],N:["23:00","07:00"]},old=[["07:00","15:00"],["15:00","23:00"]];
   Object.keys(days).forEach(dk=>{const d=days[dk];if(!def[d.shift]||(d.code&&KNOWN[String(d.code).toUpperCase()]))return;const mine=hoursOf(d.shift);
     const wrong=ST.some(x=>x.h&&x.k!==d.shift&&(()=>{const h=hoursOf(x.k);return d.start===h[0]&&d.end===h[1]})())||old.some(h=>d.start===h[0]&&d.end===h[1]&&!(mine[0]===h[0]&&mine[1]===h[1]));
