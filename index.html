@@ -490,7 +490,7 @@ function masterXlsx(wb){const lista=[];
   const dataDe=v=>{if(typeof v!=="number"||v<20000||v>80000)return null;const p=XLSX.SSF.parse_date_code(v);return p?{y:p.y,m:p.m-1,d:p.d}:null};
   for(const nf of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[nf],{header:1,raw:true,defval:null});let titulo="";
     for(const r of rows.slice(0,4))for(const c of r)if(!titulo&&typeof c==="string"&&/mapa de servi|escala/i.test(c))titulo=c.trim();
-    const tm=mesAno(titulo),fm=mesAno(nf);let cols=null,mes=fm.mes,ano=tm.ano||fm.ano,dated=false;const pessoas=[];
+    const tm=mesAno(titulo),fm=mesAno(nf);if(fm.mes<0){const a=nrm(nf).slice(0,3);fm.mes=Math.max(M3P.indexOf(a),M3E.indexOf(a));const y=String(nf).match(/(20\d\d)/);if(y)fm.ano=+y[1]}let cols=null,mes=fm.mes,ano=tm.ano||fm.ano,dated=false;const pessoas=[];
     for(const r of rows){const datas=r.map(dataDe);
       if(datas.filter(Boolean).length>=20){const i0=datas.findIndex(x=>x&&x.d===1);if(i0<0)continue;if(mes<0)mes=datas[i0].m;ano=datas[i0].y;dated=true;
         cols=[];for(let i=i0,d=1;i<r.length&&datas[i]&&datas[i].d===d&&datas[i].m===datas[i0].m;i++,d++)cols.push({dia:d,ix:i});continue}
@@ -508,13 +508,15 @@ function stepP(){const L=pl.lista,dd=L[pl.li],pi=pl.pi;
   ${L.length>1?`<div class="fld"><label for="pmes">Mês</label><select id="pmes" class="sel">${L.map((q,ix)=>`<option value="${ix}"${ix===pl.li?" selected":""}>${MESL[q.mes]} ${q.ano}</option>`).join("")}</select></div>`:""}
   <div class="fld"><label for="pwho">A sua linha na escala</label><select id="pwho" class="sel"><option value="-1"${pi<0?" selected":""} disabled>Escolha o seu número e nome…</option>${dd.pessoas.map((q,ix)=>`<option value="${ix}"${ix===pi?" selected":""}>${esc(q.id)} ${esc(q.nome)}</option>`).join("")}</select></div>
   <p style="margin-top:-6px">${pl.auto?"Escolhida pelo seu número de empregado, guardado da última vez.":"A app guarda o seu número e, nos meses seguintes, escolhe a sua linha sozinha."}</p>
+  <div class="fld"><label for="pyear">Ano da escala</label><select id="pyear" class="sel">${[-1,0,1,2].map(k=>{const y=new Date().getFullYear()+k;return `<option${y===L[0].ano?" selected":""}>${y}</option>`}).join("")}</select></div>
   ${L.length>1?`<label class="chk"><input type="checkbox" id="pall"${pl.all?" checked":""}> Importar todos os meses do ficheiro (${L.length}: ${MESL[L[0].mes]} ${L[0].ano} a ${MESL[L[L.length-1].mes]} ${L[L.length-1].ano})</label>`:""}
   <p class="err" id="perr"></p>
   <div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mback">Outro ficheiro</button><button class="btn" id="pcont">Continuar</button></div>`}
 mbox.addEventListener("change",e=>{if(!pl)return;
   if(e.target.id==="pmes"){pl.li=+e.target.value;const d2=pl.lista[pl.li];pl.pi=cfg.escalaId?d2.pessoas.findIndex(q=>q.id===cfg.escalaId):-1;pl.auto=pl.pi>=0;stepP()}
   if(e.target.id==="pwho"){pl.pi=+e.target.value;pl.auto=false}
-  if(e.target.id==="pall")pl.all=e.target.checked});
+  if(e.target.id==="pall")pl.all=e.target.checked;
+  if(e.target.id==="pyear"){const d=+e.target.value-pl.lista[0].ano;if(d){pl.lista.forEach(q=>q.ano+=d);stepP()}}});
 mbox.addEventListener("click",e=>{if(e.target.id!=="pcont"||!pl)return;const dd=pl.lista[pl.li],p=dd.pessoas[pl.pi];if(!p){$("#perr").textContent="Escolha a sua linha.";return}
   if(cfg.escalaId!==p.id){cfg.escalaId=p.id;saveCfg()}
   const src=pl.all?pl.lista:[dd],cells=[];let miss=0;
@@ -538,6 +540,7 @@ async function handle(f){const name=($("#pname")?.value||"").trim();if(name!==(c
   try{const buf=await f.arrayBuffer();const ext=f.name.split(".").pop().toLowerCase();let res=null,txt="";
     let lista=[];try{if(ext==="pdf")lista=await mapaPdf(buf.slice(0));else{await loadJs("vendor/xlsx.full.min.js");lista=masterXlsx(XLSX.read(buf,{type:"array"}))}}catch(_){}
     if(lista.length){const now=new Date();let li=lista.findIndex(q=>q.ano===now.getFullYear()&&q.mes===now.getMonth());if(li<0)li=lista.length-1;
+      const fy=f.name.match(/(20\d\d)/);if(fy&&!lista.some(q=>q.dated)){const d=+fy[1]-Math.min(...lista.map(q=>q.ano));if(d)lista.forEach(q=>q.ano+=d)}
       sortL(lista);li=lista.findIndex(q=>q.ano===now.getFullYear()&&q.mes===now.getMonth());if(li<0)li=0;
       const pi=cfg.escalaId?lista[li].pessoas.findIndex(q=>q.id===cfg.escalaId):-1;pl={lista,li,pi,auto:pi>=0,all:lista.length>1};stepP();return}
     if(!name){step1("Não reconheci o formato do Mapa de Serviço / Escala Master. Escreva o seu nome como aparece na escala e tente outra vez.");return}
@@ -587,12 +590,17 @@ function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-
   <p style="margin:6px 0 0">Use este código para entrar noutros dispositivos. Não o partilhe — quem o tiver vê os seus dados.</p></div>
   <div class="fld"><label>Sincronização</label><p style="margin:0">${live?"Ligado":"Sem ligação"} · última ${ls} · ${dirty.size} alteração(ões) por enviar</p></div>
   <div class="fld"><label>Instalar no ecrã principal</label><p style="margin:0">iPhone: Safari → Partilhar → “Adicionar ao ecrã principal”. PC: Chrome/Edge → ícone de instalar na barra de endereço. Depois funciona sem rede.</p></div>
+  <div class="fld"><label for="cy">Apagar turnos importados de um ano</label><div style="display:flex;gap:8px"><select id="cy" class="sel">${[-1,0,1,2].map(k=>`<option>${new Date().getFullYear()+k}</option>`).join("")}</select><button class="btn sec" id="cyb" style="flex:none;color:#dc2626">Apagar turnos</button></div><p style="margin:6px 0 0">Só apaga os turnos da escala; o RDO e as checklists ficam.</p></div>
   <details class="fld"><summary style="cursor:pointer;font-weight:600">Avançado</summary><label for="sapi" style="margin-top:8px">Servidor</label><input id="sapi" value="${esc(API)}"></details>
   <div class="bar" style="justify-content:space-between"><button class="btn sec" id="sout" style="color:#dc2626">Sair deste dispositivo</button><button class="btn" id="mx">Fechar</button></div>`;mod.classList.add("on")}
 $("#setBtn").onclick=settings;
 mbox.addEventListener("click",async e=>{const id=e.target.id;
   if(id==="sshow"){const k=$("#skey");k.type=k.type==="password"?"text":"password"}
   if(id==="scopy")copyText(KEY,"Código");
+  if(id==="cyb"){const y=$("#cy").value;const ks=Object.keys(days).filter(k=>k.startsWith(y+"-")&&days[k].shift);
+    if(!ks.length){toast("Sem turnos em "+y);return}
+    if(!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent="Confirmar: apagar "+ks.length+" dias";return}
+    ks.forEach(k=>edit(k,d=>{d.shift="";d.code="";d.start="";d.end=""}));render();closeM();toast(ks.length+" turnos de "+y+" apagados")}
   if(id==="sout"){if(dirty.size&&!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent="Há dados por enviar — tocar outra vez para sair";return}
     try{localStorage.removeItem(LK);localStorage.removeItem("occ-key")}catch(_){}KEY="";cfg={extra:{}};days={};dirty=new Set();closeM();render();showLogin()}});
 mbox.addEventListener("change",e=>{if(e.target.id==="sapi"){API=e.target.value.trim()||API_DEF;try{localStorage.setItem("occ-api",API)}catch(_){}sync()}});
