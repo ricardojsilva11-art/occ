@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OCC Diário</title>
+<meta name="theme-color" content="#0b2a4a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OCC Diário">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm operational tool, EFB-like, quick to scan on a phone or at the OCC desk
+   IDEA: an ops logbook — the roster calendar is the cover, each day opens its report and checklists
+   PICTURE: the month calendar with coloured shift chips, large, first thing on screen
+   COLOUR and TYPE: light slate ground, white cards, navy ink; shift colours amber/sky/indigo/slate/teal; IBM Plex Sans + Plex Mono for times
+   LAYOUT: top bar; calendar left, day panel right (stacks on phone: calendar, then day) */
+:root{color-scheme:light dark;
+--bg:light-dark(#eaeef3,#0c1117);--card:light-dark(#fff,#151c25);--card2:light-dark(#f5f7fa,#1b2430);--ink:light-dark(#0d1b2a,#e6edf5);--mute:light-dark(#5b6b7c,#8fa0b3);
+--line:light-dark(#dde3ea,#263241);--nav:light-dark(#0b2a4a,#0b2a4a);--acc:light-dark(#0b5cad,#4aa3ff);--sh:0 1px 2px rgb(13 27 42/.06),0 6px 18px rgb(13 27 42/.07);
+--M:#f59e0b;--T:#0ea5e9;--N:#5b4ee6;--F:#94a3b8;--V:#14b8a6;--ok:light-dark(#0b5cad,#4aa3ff)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "IBM Plex Sans",system-ui,sans-serif;overflow-x:clip}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.top{background:var(--nav);color:#fff;padding:12px max(4vw,14px);display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10}
+.top h1{margin:0;font-size:20px;font-weight:700;flex:1;line-height:1.1}
+.top h1 small{display:block;font-weight:400;font-size:13px;opacity:.75}
+.clock{font:600 22px "IBM Plex Mono";white-space:nowrap}.clock small{font:500 11px "IBM Plex Sans";opacity:.7;margin-inline-start:3px}
+.sync{font-size:12px;opacity:.8;white-space:nowrap}
+.sync i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-inline-end:5px}
+.sync.on i{background:#34d399}
+.wrap{max-width:1240px;margin:auto;padding:18px max(4vw,14px) 48px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;align-items:start}
+@media(max-width:920px){.wrap{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--card);border-radius:16px;box-shadow:var(--sh);border:1px solid var(--line)}
+/* calendar */
+.cal{padding:16px}
+.ch{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.ch h2{margin:0;flex:1;font-size:clamp(20px,5vw,26px);line-height:1.1}
+.ib{width:44px;height:44px;border-radius:12px;background:var(--card2);font-size:20px;display:grid;place-items:center}
+.pill{height:44px;padding:0 14px;border-radius:12px;background:var(--card2);font-weight:600;font-size:15px}
+.wd,.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.wd span{font-size:12px;font-weight:600;color:var(--mute);text-align:center;padding:4px 0}
+.day{position:relative;aspect-ratio:1/1.05;border-radius:12px;background:var(--card2);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 2px;font-weight:600;font-size:15px;border:2px solid transparent;transition:transform .12s}
+.day:hover{transform:translateY(-1px)}
+.day.out{opacity:.35}
+.day.today .n{background:var(--ink);color:var(--card);border-radius:8px;padding:0 6px}
+.day.sel{border-color:var(--acc)}
+.chip{min-width:28px;height:22px;padding:0 6px;border-radius:7px;font:600 12px "IBM Plex Mono";display:grid;place-items:center;color:#fff;background:var(--c)}
+.chip.empty{background:transparent}
+.dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+.lg{display:flex;align-items:center;gap:6px;height:40px;padding:0 12px 0 6px;border-radius:12px;background:var(--card2);font-size:14px;font-weight:500;border:2px solid transparent}
+.lg.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--card))}
+.lg b{font:600 13px "IBM Plex Mono"}
+.paint{margin-top:12px;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--acc) 10%,var(--card));font-size:14px;display:none}
+.paint.on{display:block}
+.stats{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:14px;color:var(--mute);display:flex;flex-wrap:wrap;gap:6px 16px}
+.stats b{color:var(--ink)}
+/* day panel */
+.dp{overflow:hidden}
+.dh{padding:18px 18px 14px;border-bottom:1px solid var(--line)}
+.dh h2{margin:0 0 12px;font-size:24px;line-height:1.1}
+.dh h2 small{display:block;font-size:14px;font-weight:500;color:var(--mute);margin-top:4px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.sb{height:44px;min-width:52px;padding:0 12px;border-radius:12px;background:var(--card2);font-weight:600;font-size:14px;border:2px solid transparent;display:flex;align-items:center;gap:6px}
+.sb i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+.sb.on{background:var(--c);color:#fff}.sb.on i{background:#fff}
+.hrs{display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--mute)}
+.hrs input{width:118px}
+input,textarea{font-size:16px;border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:10px 12px;width:100%;min-height:44px}
+textarea{resize:vertical;min-height:72px;line-height:1.45}
+.tabs{display:flex;gap:4px;padding:10px 12px 0;border-bottom:1px solid var(--line)}
+.tab{height:44px;padding:0 16px;font-weight:600;color:var(--mute);border-bottom:3px solid transparent;font-size:15px}
+.tab[aria-selected=true]{color:var(--ink);border-color:var(--acc)}
+.tab span{font:500 12px "IBM Plex Mono";margin-inline-start:6px;padding:2px 6px;border-radius:6px;background:var(--card2)}
+.pane{padding:16px 18px 20px}
+.kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.kpi label{background:var(--card2);border-radius:12px;padding:8px 10px;font-size:12px;color:var(--mute);font-weight:500;display:block}
+.kpi input{border:0;background:transparent;padding:0;min-height:34px;font:600 22px "IBM Plex Mono";color:var(--ink)}
+@media(max-width:600px){.kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.rsec{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:14px}
+.rsec h3{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0;padding:6px 8px 6px 14px;min-height:48px;background:#0f1b29;color:#fff;font-size:14px;font-weight:700;letter-spacing:.06em;text-decoration:underline;text-underline-offset:3px}
+.cp{height:36px;padding:0 14px;border-radius:9px;background:rgb(255 255 255/.14);color:#fff;font-weight:600;font-size:13px;text-decoration:none;letter-spacing:0}
+.cpb2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:4px 0 8px}.cpb2 .btn{height:52px;font-size:15px}
+@media(max-width:600px){.cpb2{grid-template-columns:minmax(0,1fr)}}
+.cp:hover{background:rgb(255 255 255/.24)}
+.cpbox{width:100%;min-height:220px;font:14px/1.5 "IBM Plex Mono",monospace;margin:8px 0 12px}
+.rf{display:grid;grid-template-columns:170px minmax(0,1fr);align-items:start;gap:10px;padding:8px 12px;border-top:1px solid var(--line)}
+.rf:first-of-type{border-top:0}
+.rf label{font-weight:700;font-size:14px;padding-top:11px}
+.rf textarea{min-height:44px;resize:none;overflow:hidden}
+@media(max-width:600px){.rf{grid-template-columns:minmax(0,1fr);gap:4px}.rf label{padding-top:2px}}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:14px;font-weight:600;margin-bottom:5px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.btn{height:44px;padding:0 16px;border-radius:12px;background:var(--acc);color:#fff;font-weight:600}
+.btn.sec{background:var(--card2);color:var(--ink)}
+.saved{font-size:13px;color:var(--mute)}
+/* checklists */
+.grp{font-size:13px;font-weight:700;color:var(--mute);margin:6px 0 10px;letter-spacing:.02em}
+.tls{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+@media(max-width:600px){.tls{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tl{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:118px;padding:14px;border-radius:16px;color:#fff;text-align:left;background:linear-gradient(150deg,color-mix(in srgb,var(--k) 88%,#fff),color-mix(in srgb,var(--k) 85%,#000));box-shadow:0 6px 16px color-mix(in srgb,var(--k) 30%,transparent);transition:transform .12s}
+.tl:hover{transform:translateY(-2px)}
+.tic{width:40px;height:40px;border-radius:12px;background:rgb(255 255 255/.2);display:grid;place-items:center}
+.tnm{font-weight:700;font-size:16px;line-height:1.2;flex:1}
+.tpr{display:flex;align-items:center;gap:8px;width:100%;font:600 13px "IBM Plex Mono"}
+.tbar{flex:1;height:6px;border-radius:3px;background:rgb(255 255 255/.3);overflow:hidden}.tbar i{display:block;height:100%;background:#fff}
+.tl.full::after{content:"✓";position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:50%;background:#fff;color:var(--k);display:grid;place-items:center;font-weight:700}
+.cd{border-radius:18px;overflow:hidden;border:1px solid var(--line)}
+.cdh{display:flex;align-items:center;gap:10px;padding:14px;background:linear-gradient(150deg,color-mix(in srgb,var(--k) 88%,#fff),color-mix(in srgb,var(--k) 85%,#000));color:#fff}
+.cbk{width:44px;height:44px;border-radius:12px;background:rgb(255 255 255/.18);color:#fff;display:grid;place-items:center;flex:none}
+.cic{width:44px;height:44px;border-radius:12px;background:rgb(255 255 255/.18);display:grid;place-items:center;flex:none}
+.cdt{flex:1;display:flex;flex-direction:column;line-height:1.2}.cdt b{font-size:20px}.cdt span{font-size:14px;opacity:.9;margin-top:2px}
+.crs{height:40px;padding:0 14px;border-radius:10px;background:rgb(255 255 255/.18);color:#fff;font-weight:600;flex:none}
+.cpg{height:6px;background:color-mix(in srgb,var(--k) 18%,var(--card2))}.cpg i{display:block;height:100%;background:var(--k);transition:width .25s}
+.cit{list-style:none;margin:0;padding:10px}
+.ci{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;cursor:pointer;user-select:none;min-height:56px;margin-bottom:6px;background:var(--card2);border:2px solid transparent}
+.ci:hover{border-color:color-mix(in srgb,var(--k) 40%,transparent)}
+.cn{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font:600 14px "IBM Plex Mono";color:var(--k);background:color-mix(in srgb,var(--k) 15%,var(--card));border:2px solid var(--k)}
+.ci .t{flex:1;font-weight:500}
+.ci.on{background:color-mix(in srgb,var(--k) 10%,var(--card))}
+.ci.on .cn{background:var(--k);color:#fff}
+.ci.on .t{color:var(--mute);text-decoration:line-through}
+.x{color:var(--mute);width:36px;height:36px;border-radius:8px}
+.rdoq{margin:4px 10px 10px;padding:12px;border-radius:12px;border:2px dashed color-mix(in srgb,var(--k) 50%,var(--line));display:grid;gap:8px}
+.rdoq b{font-size:14px}
+.rdoq div{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px}
+@media(max-width:600px){.rdoq div{grid-template-columns:1fr 1fr}.rdoq div input:last-child{grid-column:1/-1}}
+.addi{display:flex;gap:8px;padding:0 10px 12px}
+.gtop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:2px 0 10px}
+.tlw{position:relative;display:grid}
+.tdel{position:absolute;top:-8px;right:-8px;width:34px;height:34px;border-radius:50%;background:#fff;color:#dc2626;font-weight:700;box-shadow:0 2px 8px rgb(0 0 0/.25);border:2px solid #dc2626;z-index:2}
+.tadd{background:var(--card2)!important;color:var(--acc)!important;border:2px dashed color-mix(in srgb,var(--acc) 50%,var(--line));box-shadow:none!important;justify-content:center;align-items:center;text-align:center}
+.crs.on{background:#fff;color:var(--k)}
+.sws{display:flex;flex-wrap:wrap;gap:8px}
+.sw{width:40px;height:40px;border-radius:12px;border:3px solid transparent}
+.sw.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px #fff}
+.icb{width:44px;height:44px;border-radius:12px;background:var(--card2);display:grid;place-items:center;color:var(--mute);border:2px solid transparent}
+.icb.on{background:var(--k);color:#fff}
+.empty{color:var(--mute);font-size:14px}
+.note{font-size:13px;color:var(--mute);margin:12px 0 0}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30}
+.toast.on{opacity:1}
+.imp{width:100%;margin:2px 0 12px;height:48px;border-radius:12px;border:2px dashed color-mix(in srgb,var(--acc) 45%,var(--line));color:var(--acc);font-weight:600;font-size:15px;background:color-mix(in srgb,var(--acc) 6%,var(--card))}
+.imp:hover{background:color-mix(in srgb,var(--acc) 12%,var(--card))}
+.mod{position:fixed;inset:0;background:rgb(8 15 25/.55);display:none;place-items:center;padding:16px;z-index:40}
+.mod.on{display:grid}
+.mbox{width:min(560px,100%);max-height:88vh;overflow:auto;background:var(--card);border-radius:18px;padding:20px;box-shadow:0 20px 60px rgb(0 0 0/.3)}
+.mbox h3{margin:0 0 6px;font-size:22px}
+.mbox p{margin:0 0 14px;color:var(--mute);font-size:14px}
+.drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;cursor:pointer;margin-bottom:12px;font-weight:600}
+.drop.over,.drop:hover{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 6%,var(--card))}
+.drop small{display:block;font-weight:400;color:var(--mute);margin-top:4px}
+.drop input{display:none}
+.spin{width:36px;height:36px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--acc);margin:20px auto;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.prev{max-height:44vh;overflow:auto;border:1px solid var(--line);border-radius:12px;margin:10px 0}
+.pr{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:14px}
+.pr:last-child{border-bottom:0}
+.pr .d{flex:1}
+.pr.old{opacity:.55}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;margin:8px 0}
+.chk input{width:20px;height:20px;min-height:0}
+.err{color:#d43c2f;font-size:14px;margin:8px 0}
+.gear{width:40px;height:40px;border-radius:10px;color:#fff;display:grid;place-items:center;background:rgb(255 255 255/.1)}
+.top{padding-top:max(12px,env(safe-area-inset-top))}
+.login{position:fixed;inset:0;z-index:50;background:linear-gradient(160deg,#0b2a4a,#123f6b);display:none;place-items:center;padding:20px}
+.login.on{display:grid}
+.lbox{width:min(400px,100%);background:var(--card);border-radius:20px;padding:26px;display:grid;gap:10px;box-shadow:0 20px 60px rgb(0 0 0/.35)}
+.lbox h2{margin:6px 0 0;font-size:26px}.lbox p{margin:0;color:var(--mute);font-size:14px}
+.lbox input{font-size:18px;letter-spacing:.04em;text-align:center}
+.maps{display:grid;gap:10px;max-height:46vh;overflow:auto;margin-bottom:6px}
+.mp{border:1px solid var(--line);border-radius:12px;padding:10px}
+.mp.need{border-color:#f59e0b;background:color-mix(in srgb,#f59e0b 7%,var(--card))}
+.mph{display:flex;align-items:center;gap:8px;margin-bottom:8px}.mph small{color:var(--mute)}
+.mp .sb{height:38px;min-width:0;font-size:13px}
+@media(max-width:600px){.top h1 small{display:none}.sync{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>OCC Diário<small>Escala · RDO · checklists</small></h1>
+  <span class="sync" id="sync"><i></i>A ligar…</span>
+  <span class="clock" id="clk">--:--<small>UTC</small></span>
+  <button class="gear" id="setBtn" aria-label="Definições"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+<div class="wrap">
+  <section class="card cal">
+    <div class="ch">
+      <button class="ib" id="prev" aria-label="Mês anterior">‹</button>
+      <h2 id="mon">—</h2>
+      <button class="pill" id="today">Hoje</button>
+      <button class="ib" id="next" aria-label="Mês seguinte">›</button>
+    </div>
+    <button class="imp" id="impBtn">⇪ Importar escala (PDF ou Excel)</button>
+    <div class="wd"><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span></div>
+    <div class="days" id="days"></div>
+    <div class="legend" id="legend"></div>
+    <div class="paint" id="paint"></div>
+    <div class="stats" id="stats"></div>
+  </section>
+  <section class="card dp" id="dp"></section>
+</div>
+<div class="toast" id="toast"></div>
+<div class="login" id="login"><form class="lbox" id="lf" autocomplete="off">
+  <img src="icon-192.png" alt="" width="64" height="64" style="border-radius:16px">
+  <h2>OCC Diário</h2><p>Entre com o seu código pessoal. É ele que separa os seus dados dos de outras pessoas.</p>
+  <input id="lk" class="mono" type="text" autocapitalize="characters" spellcheck="false" placeholder="OCC-XXXX-XXXX-XXXX" aria-label="Código pessoal">
+  <p class="err" id="lerr"></p>
+  <button class="btn" style="width:100%">Entrar</button>
+  <button type="button" class="btn sec" id="lgen" style="width:100%;margin-top:8px">Primeira vez? Criar código</button>
+</form></div>
+<div class="mod" id="mod" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="mbox" id="mbox"></div></div>
+<script>
+{
+const ST=[{k:"M",n:"Manhã",h:["07:00","15:00"]},{k:"T",n:"Tarde",h:["15:00","23:00"]},{k:"N",n:"Noite",h:["23:00","07:00"]},{k:"F",n:"Folga"},{k:"V",n:"Férias"}];
+const SK=Object.fromEntries(ST.map(s=>[s.k,s]));
+const RDO=[{h:"SHIFT MANAGER",f:[["wx","WX/HLD"],["rgzfw","RGZFW"],["div","Diverted Flights"],["fuel","Fueled Aircraft"],["sys","System failures"]]},{h:"ATC MANAGEMENT",f:[["fl","ATC FL Capping"],["atfcm","ATFCM Regulations"],["oth","Others"]]}];
+const TPL=[
+{id:"ini",g:"Turno",t:"Início de turno",c:"#f59e0b",ic:"sun",i:["Briefing com DM cessante","Log OCC lido","Pendentes identificados","Frota / AOG / MEL revistos","Spares e reservas de tripulação","Meteo e NOTAM revistos","ATFM / slots verificados","Curfews em risco identificados"]},
+{id:"rot",g:"Turno",t:"Rotina horária",c:"#0ea5e9",ic:"clock",i:["Atrasos / OTP","CTOT vs EOBT","Flight watch","Margens FTL","Log OCC atualizado"]},
+{id:"fim",g:"Turno",t:"Fim de turno",c:"#7c3aed",ic:"moon",i:["Planeamento D+1 confirmado","Manutenção noturna confirmada","RDO preenchido","Reports submetidos","Briefing ao DM entrante"]},
+{id:"div",g:"IROPS",t:"Diverted flight",c:"#e11d48",ic:"divert",rdo:1,i:["Alternante, motivo e ETA confirmados (ACARS / SATCOM)","Combustível remanescente e necessidades","Handling, escala e aeroporto alternante informados","Estacionamento e serviços em terra (fuel, catering, PRM)","FTL da tripulação — pode continuar?","Curfew / horário do alternante e do destino","Decisão: reabastecer e prosseguir / night stop / cancelar","Novo plano de voo e CTOT de continuação","Assistência a passageiros (EU261, hotel, transporte)","Hotel e transporte da tripulação (se night stop)","MCC informado (inspeção técnica se necessário)","Rotações seguintes replaneadas","Registado no RDO (Diverted Flights)"]},
+{id:"aog",g:"IROPS",t:"AOG",c:"#ea580c",ic:"wrench",i:["MCC: diagnóstico e ETR","MEL / CDL verificada","Voos afetados identificados","Plano de recuperação decidido","PAX e tripulação tratados","Stakeholders informados"]},
+{id:"cur",g:"IROPS",t:"Risco de curfew",c:"#4f46e5",ic:"moon",i:["Limite UTC confirmado","ETA + taxi vs limite","Dispensa do aeroporto verificada","Alternativa / night stop decidido","Hotel e manutenção coordenados"]},
+{id:"dly",g:"IROPS",t:"Atraso significativo",c:"#ca8a04",ic:"clock",i:["Causa e ETD revisto","Impacto nas rotações","FTL e curfew verificados","Troca de avião / tripulação avaliada","Novo CTOT","Stakeholders informados"]},
+{id:"wx",g:"IROPS",t:"Meteo / ATC",c:"#0891b2",ic:"cloud",i:["Fenómeno / regulação e janela","Voos afetados listados","Fuel e alternantes com despacho","De-icing / melhoria de slot","Medidas proativas decididas"]},
+{id:"cnx",g:"IROPS",t:"Cancelamento",c:"#db2777",ic:"x",i:["Autorização obtida","Reproteção de PAX iniciada","Avião, tripulação e slot replaneados","Aeroportos e handling informados"]},
+{id:"med",g:"IROPS",t:"Emergência médica",c:"#16a34a",ic:"plus",i:["Informação da tripulação","Apoio médico em terra","Decisão do comandante","Serviços médicos no destino"]},
+{id:"erp",g:"IROPS",t:"Emergência / ERP",c:"#dc2626",ic:"alert",i:["Info inicial registada com hora","ERP ativado","Management / equipa de crise","Autoridades conforme ERP","Manifesto e documentos preservados","Comunicação externa só via porta-voz"]}
+];
+const IC={sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',moon:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',divert:'<path d="M5 20V10a4 4 0 0 1 4-4h9"/><path d="M14 2l4 4-4 4"/><circle cx="5" cy="20" r="1.5"/>',wrench:'<path d="M14.7 6.3a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3l7.7-7.7z"/><path d="M14.7 6.3 17 4"/>',cloud:'<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9a4.5 4.5 0 0 0 1 9z"/>',x:'<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>',plus:'<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/>',alert:'<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/>',back:'<path d="M15 5l-7 7 7 7"/>'};
+const svg=k=>`<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
+let chk=null,editing=false;
+const SW=["#e11d48","#ea580c","#f59e0b","#16a34a","#0891b2","#0ea5e9","#4f46e5","#7c3aed","#db2777","#475569"];
+IC.list='<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>';
+IC.plane='<path d="M10.5 21l1.5-6-7-2 1-2 7 .5L17 4a1.5 1.5 0 0 1 2.5 1.5L16 12l2 7-2 1-3.5-5-2 6z"/>';
+IC.edit='<path d="M4 20h4L19 9l-4-4L4 16v4z"/>';
+const ICK=["list","plane","divert","wrench","clock","sun","moon","cloud","alert","plus","x"];
+const allT=()=>TPL.filter(t=>!(cfg.hidden||[]).includes(t.id)).concat(cfg.lists||[]);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const p2=n=>String(n).padStart(2,"0");
+const key=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
+const fromKey=k=>{const [y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d)};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const todayK=key(new Date());
+let cfg={extra:{}},days={},sel=todayK,month=new Date(),tab="rep",paint=null,open={ini:1,rot:1,fim:1};
+month.setDate(1);
+let live=false;
+const API_DEF="https://occ-api.ricardo-j-silva11.workers.dev";
+let API=localStorage.getItem("occ-api")||API_DEF,KEY=localStorage.getItem("occ-key")||"";
+const fnv=s=>{let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0).toString(36)};
+let LK="occ-x",dirty=new Set(),since=0,syncing=false,syncAgain=false,syncT=null,lastSync=0;
+const loadLocal=()=>{try{const l=JSON.parse(localStorage.getItem(LK)||"null");cfg=(l&&l.cfg)||{extra:{}};cfg.extra=cfg.extra||{};days=(l&&l.days)||{};dirty=new Set((l&&l.dirty)||[]);since=(l&&l.since)||0}catch(e){}};
+const local=()=>{try{localStorage.setItem(LK,JSON.stringify({cfg,days,dirty:[...dirty],since}))}catch(e){}};
+const blank=k=>({date:k,shift:"",start:"",end:"",kpi:{},rep:{},checks:{}});
+const getDay=k=>days[k]||blank(k);
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),1800)}
+function persist(id,data,wait){if(id==="cfg")cfg._u=Date.now();dirty.add(id);local();
+  setSync(false,navigator.onLine?"A gravar…":"Offline · guardado no dispositivo");clearTimeout(syncT);syncT=setTimeout(sync,Math.max(wait||0,1200))}
+const saveDay=(k,wait)=>persist("d-"+k,days[k],wait);
+const saveCfg=()=>persist("cfg",cfg,0);
+const docOf=id=>id==="cfg"?cfg:days[id.slice(2)];
+const upd=v=>v?(typeof v._u==="number"?v._u:(Date.parse(v.updated)||0)):0;
+async function sync(){if(!KEY)return;if(syncing){syncAgain=true;return}
+  if(!navigator.onLine){setSync(false,"Offline · guardado no dispositivo");return}
+  syncing=true;syncAgain=false;
+  const sent=[...dirty].map(id=>{const d=docOf(id);return d?{id,data:d,updated:upd(d)||Date.now()}:null}).filter(Boolean);
+  try{const r=await fetch(API.replace(/\/$/,"")+"/sync",{method:"POST",headers:{"Content-Type":"application/json","X-Key":KEY},body:JSON.stringify({since:Math.max(0,since-5000),docs:sent})});
+    if(r.status===401){setSync(false,"Código inválido");syncing=false;return}
+    if(!r.ok)throw new Error("http "+r.status);
+    const j=await r.json();
+    sent.forEach(s=>{if(upd(docOf(s.id))===s.updated)dirty.delete(s.id)});
+    let ch=false;
+    (j.docs||[]).forEach(x=>{if(dirty.has(x.id)||!x.data)return;const cur=docOf(x.id);if(cur&&upd(cur)>=x.updated)return;
+      if(x.id==="cfg"){cfg=x.data;cfg.extra=cfg.extra||{};ch=true}else if(x.id.startsWith("d-")){days[x.id.slice(2)]=x.data;ch=true}});
+    since=j.now||since;lastSync=Date.now();local();live=true;setSync(true,dirty.size?"A gravar…":"Sincronizado");
+    if(ch){renderCal();const a=document.activeElement;if(!(a&&dp.contains(a)&&(a.tagName==="TEXTAREA"||a.tagName==="INPUT")))renderDay()}}
+  catch(e){live=false;setSync(false,"Sem rede · guardado no dispositivo")}
+  syncing=false;if(syncAgain||(live&&dirty.size))setTimeout(sync,800)}
+function setSync(on,t){const s=$("#sync");s.classList.toggle("on",on);s.innerHTML="<i></i>"+esc(t)}
+function edit(k,fn,wait){const d=clone(getDay(k));fn(d);d.updated=new Date().toISOString();days[k]=d;saveDay(k,wait)}
+const hasRep=d=>d&&Object.values(d.rep||{}).some(v=>v&&String(v).trim());
+const items=t=>{const h=(cfg.hideIt||{})[t.id]||[];return t.i.map((x,n)=>({id:"b"+n,t:x})).filter(i=>!h.includes(i.id)).concat((cfg.extra?.[t.id]||[]).map(x=>({id:x.id,t:x.t,x:1})))};
+const doneOf=(d,t)=>{const c=(d.checks||{})[t.id]||[];return items(t).filter(i=>c.includes(i.id)).length};
+/* calendar */
+function renderCal(){
+  const y=month.getFullYear(),m=month.getMonth();
+  {const t=month.toLocaleDateString("pt-PT",{month:"long"});$("#mon").textContent=t.charAt(0).toUpperCase()+t.slice(1)+" "+y}
+  const first=new Date(y,m,1),off=(first.getDay()+6)%7,start=new Date(y,m,1-off);
+  let h="";for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);
+    if(i>=35&&d.getMonth()!==m)break;
+    const k=key(d),D=days[k],s=D&&SK[D.shift];
+    h+=`<button class="day${d.getMonth()!==m?" out":""}${k===todayK?" today":""}${k===sel?" sel":""}" data-k="${k}" aria-label="${d.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"})}${s?", "+s.n:""}">
+      <span class="n">${d.getDate()}</span>${s?`<span class="chip" style="--c:var(--${s.k})">${esc((D.code||s.k).slice(0,4))}</span>`:`<span class="chip empty"></span>`}${hasRep(D)?`<i class="dot" title="Com RDO"></i>`:""}</button>`}
+  $("#days").innerHTML=h;
+  $("#legend").innerHTML=`<span style="font-size:13px;color:var(--mute);margin-inline-end:2px">Preencher escala:</span>`+ST.map(s=>`<button class="lg${paint===s.k?" on":""}" data-p="${s.k}" style="--c:var(--${s.k})"><span class="chip" style="--c:var(--${s.k})">${s.k}</span>${s.n}</button>`).join("")+`<button class="lg${paint==="-"?" on":""}" data-p="-" style="--c:var(--mute)">Apagar</button>`;
+  const pt=$("#paint");pt.classList.toggle("on",!!paint);
+  pt.innerHTML=paint?`Toque nos dias para marcar <b>${paint==="-"?"sem turno":esc(SK[paint].n)}</b>. <button class="pill" id="pdone" style="height:34px;margin-inline-start:6px">Terminar</button>`:"";
+  const cnt={};let rep=0;Object.values(days).forEach(D=>{const d=fromKey(D.date);if(d.getFullYear()===y&&d.getMonth()===m){if(D.shift)cnt[D.shift]=(cnt[D.shift]||0)+1;if(hasRep(D))rep++}});
+  const work=(cnt.M||0)+(cnt.T||0)+(cnt.N||0);
+  $("#stats").innerHTML=`<span>Turnos <b>${work}</b></span>`+ST.map(s=>`<span>${s.n} <b>${cnt[s.k]||0}</b></span>`).join("")+`<span>RDO <b>${rep}</b></span>`}
+/* day panel */
+function renderDay(){
+  const d=getDay(sel),dt=fromKey(sel),s=SK[d.shift];
+  const nC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+doneOf(d,t),0),tC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+items(t).length,0);
+  const title=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"});
+  $("#dp").innerHTML=`<div class="dh"><h2>${esc(title.charAt(0).toUpperCase()+title.slice(1))}<small>${sel===todayK?"Hoje · ":""}${s?esc(s.n)+(d.start?` · <span class="mono">${esc(d.start)}–${esc(d.end)}</span>`:""):"Sem turno marcado"}</small></h2>
+    <div class="seg">${ST.map(x=>`<button class="sb${d.shift===x.k?" on":""}" data-s="${x.k}" style="--c:var(--${x.k})"><i></i>${x.n}</button>`).join("")}</div>
+    ${s&&s.h?`<div class="hrs">Horário <input type="time" id="hs" value="${esc(d.start)}" aria-label="Início"> até <input type="time" id="he" value="${esc(d.end)}" aria-label="Fim"></div>`:""}</div>
+  <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="rep" aria-selected="${tab==="rep"}">RDO</button><button class="tab" role="tab" data-t="chk" aria-selected="${tab==="chk"}">Checklists<span>${nC}/${tC}</span></button></div>
+  <div class="pane" id="pane">${tab==="rep"?repPane(d):chkPane(d)}</div>`}
+function repPane(d){return RDO.map((g,gi)=>`<div class="rsec"><h3><span>${g.h}</span><button class="cp" data-cp="${gi}">⧉ Copiar</button></h3>${g.f.map(([k,l])=>`<div class="rf"><label for="r-${k}">${l}</label><textarea id="r-${k}" data-rep="${k}" rows="1" placeholder="NIL">${esc(d.rep?.[k]||"")}</textarea></div>`).join("")}</div>`).join("")+
+  `<div class="cpb2">${RDO.map((g,gi)=>`<button class="btn" data-cp="${gi}">Copiar ${g.h}</button>`).join("")}</div><div class="bar"><button class="btn sec" id="copy">Copiar tudo</button><span class="saved" id="saved">${d.updated?"Guardado "+new Date(d.updated).toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}):""}</span></div>`}
+function chkPane(d){
+  if(chk&&!allT().some(x=>x.id===chk))chk=null;
+  if(chk){const t=allT().find(x=>x.id===chk),it=items(t),n=doneOf(d,t),c=(d.checks||{})[t.id]||[],pc=it.length?Math.round(n/it.length*100):0;
+    return `<div class="cd" style="--k:${t.c}"><div class="cdh"><button class="cbk" data-back aria-label="Voltar">${svg("back")}</button><span class="cic">${svg(t.ic)}</span><div class="cdt"><b>${esc(t.t)}</b><span>${it.length&&n===it.length?"Concluída ✓":n+" de "+it.length+" feitos"}</span></div><button class="crs${editing?" on":""}" data-edit aria-pressed="${editing}">${editing?"OK":"Editar"}</button><button class="crs" data-reset="${t.id}">Reset</button></div>
+    <div class="cpg"><i style="width:${pc}%"></i></div>
+    <ol class="cit">${it.length?"":`<p class="empty" style="padding:8px 4px">Sem itens. Adicione o primeiro em baixo.</p>`}${it.map((i,ix)=>`<li class="ci${c.includes(i.id)?" on":""}" role="checkbox" tabindex="0" aria-checked="${c.includes(i.id)}" data-c="${t.id}|${i.id}"><span class="cn">${c.includes(i.id)?"✓":ix+1}</span><span class="t">${esc(i.t)}</span>${editing?`<button class="x" data-del="${t.id}|${i.id}" aria-label="Apagar item">✕</button>`:""}</li>`).join("")}</ol>
+    ${t.rdo?`<form class="rdoq" data-rdodiv><b>Enviar para o RDO · Diverted Flights</b><div><input id="dv1" placeholder="Voo (TP1234)" aria-label="Voo"><input id="dv2" placeholder="Alternante (OPO)" aria-label="Alternante"><input id="dv3" placeholder="Motivo / solução" aria-label="Motivo"></div><button class="btn" style="background:var(--k)">Adicionar ao RDO</button></form>`:""}
+    <form class="addi" data-add="${t.id}"><input placeholder="Adicionar item a esta checklist" aria-label="Novo item"><button class="btn sec" style="flex:none">+</button></form></div>`}
+  const tile=t=>{const it=items(t),n=doneOf(d,t),pc=it.length?n/it.length*100:0;return `<div class="tlw"><button class="tl${n===it.length&&it.length?" full":""}" data-oc="${t.id}" style="--k:${t.c}"><span class="tic">${svg(t.ic)}</span><span class="tnm">${esc(t.t)}</span><span class="tpr"><span class="tbar"><i style="width:${pc}%"></i></span>${n===it.length&&it.length?"✓":n+"/"+it.length}</span></button>${editing?`<button class="tdel" data-dl="${t.id}" aria-label="Apagar ${esc(t.t)}">✕</button>`:""}</div>`};
+  const addT=g=>editing?`<button class="tl tadd" data-new="${g}">${svg("plus")}<span class="tnm">Nova checklist</span></button>`:"";
+  const hid=(cfg.hidden||[]).length;
+  return `<div class="gtop"><span class="grp" style="margin:0">Turno</span><button class="pill" data-edit aria-pressed="${editing}">${editing?"✓ Concluir edição":"✎ Editar checklists"}</button></div>
+  <div class="tls">${allT().filter(t=>t.g==="Turno").map(tile).join("")}${addT("Turno")}</div>
+  <p class="grp">IROPS · toque quando acontecer</p><div class="tls">${allT().filter(t=>t.g==="IROPS").map(tile).join("")}${addT("IROPS")}</div>
+  ${editing&&hid?`<button class="pill" data-restore style="margin-bottom:8px">Repor ${hid} checklist(s) original(is) apagada(s)</button>`:""}
+  <p class="note">Modelo genérico — os procedimentos da companhia (OM-A, ERP, MCC) prevalecem. Itens adicionados ficam em todos os dias.</p>`}
+function render(){renderCal();renderDay()}
+const _rd=renderDay;renderDay=function(){_rd();document.querySelectorAll("[data-rep]").forEach(fit)};
+/* events */
+$("#prev").onclick=()=>{month.setMonth(month.getMonth()-1);renderCal()};
+$("#next").onclick=()=>{month.setMonth(month.getMonth()+1);renderCal()};
+$("#today").onclick=()=>{month=new Date();month.setDate(1);sel=todayK;render()};
+$("#days").addEventListener("click",e=>{const b=e.target.closest(".day");if(!b)return;const k=b.dataset.k;
+  if(paint){edit(k,d=>{const s=paint==="-"?"":paint;d.shift=s;d.code="";const h=SK[s]?.h;d.start=h?h[0]:"";d.end=h?h[1]:""});if(k===sel)renderDay();renderCal();return}
+  sel=k;chk=null;const d=fromKey(k);if(d.getMonth()!==month.getMonth()){month=new Date(d.getFullYear(),d.getMonth(),1)}render();
+  if(innerWidth<920)$("#dp").scrollIntoView({behavior:"smooth",block:"start"})});
+$("#legend").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b)return;paint=paint===b.dataset.p?null:b.dataset.p;renderCal()});
+$("#paint").addEventListener("click",e=>{if(e.target.id==="pdone"){paint=null;renderCal()}});
+const dp=$("#dp");
+dp.addEventListener("click",async e=>{
+  const s=e.target.closest("[data-s]");if(s){const k=s.dataset.s;edit(sel,d=>{d.shift=d.shift===k?"":k;d.code="";const h=SK[d.shift]?.h;if(h&&!d.start){d.start=h[0];d.end=h[1]}if(!SK[d.shift]?.h){d.start="";d.end=""}});render();return}
+  const t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;renderDay();return}
+  const oc=e.target.closest("[data-oc]");if(oc){chk=oc.dataset.oc;renderDay();$("#dp").scrollIntoView({block:"start",behavior:"smooth"});return}
+  if(e.target.closest("[data-back]")){chk=null;editing=false;renderDay();return}
+  if(e.target.closest("[data-edit]")){editing=!editing;renderDay();return}
+  const dl=e.target.closest("[data-dl]");if(dl){const t=allT().find(x=>x.id===dl.dataset.dl);if(t)confirmDel(t);return}
+  const nw=e.target.closest("[data-new]");if(nw){newList(nw.dataset.new);return}
+  if(e.target.closest("[data-restore]")){cfg.hidden=[];saveCfg();renderDay();toast("Checklists repostas");return}
+  const rs=e.target.closest("[data-reset]");if(rs){const tid=rs.dataset.reset;edit(sel,d=>{d.checks=d.checks||{};d.checks[tid]=[]});renderDay();renderCal();return}
+  const del=e.target.closest("[data-del]");if(del){const [tid,iid]=del.dataset.del.split("|");
+    if(iid.startsWith("b")){cfg.hideIt=cfg.hideIt||{};(cfg.hideIt[tid]=cfg.hideIt[tid]||[]).push(iid)}else cfg.extra[tid]=(cfg.extra[tid]||[]).filter(x=>x.id!==iid);saveCfg();renderDay();renderCal();return}
+  const c=e.target.closest("[data-c]");if(c){togC(c.dataset.c);return}
+  if(e.target.id==="copy")copyText(repText(getDay(sel)),"RDO completo");
+  const cp=e.target.closest("[data-cp]");if(cp)copyText(secText(getDay(sel),RDO[+cp.dataset.cp]),RDO[+cp.dataset.cp].h);
+});
+function togC(v){const [tid,iid]=v.split("|");edit(sel,d=>{d.checks=d.checks||{};const a=d.checks[tid]||[];d.checks[tid]=a.includes(iid)?a.filter(x=>x!==iid):a.concat(iid)});renderDay();renderCal();const n=document.querySelector(`[data-c="${v}"]`);n&&n.focus({preventScroll:true})}
+dp.addEventListener("keydown",e=>{const c=e.target.closest("[data-c]");if(c&&(e.key===" "||e.key==="Enter")){e.preventDefault();togC(c.dataset.c)}});
+dp.addEventListener("submit",e=>{e.preventDefault();
+  if(e.target.closest("[data-rdodiv]")){const v=[$("#dv1").value,$("#dv2").value,$("#dv3").value].map(x=>x.trim()).filter(Boolean);if(!v.length)return;
+    edit(sel,d=>{d.rep=d.rep||{};d.rep.div=(d.rep.div?d.rep.div.trim()+"; ":"")+v.join(" · ")});renderDay();renderCal();toast("Adicionado ao RDO");return}
+  const f=e.target.closest("[data-add]");if(!f)return;const v=f.querySelector("input").value.trim();if(!v)return;
+  const tid=f.dataset.add;(cfg.extra[tid]=cfg.extra[tid]||[]).push({id:"x"+Date.now().toString(36),t:v});saveCfg();renderDay();document.querySelector(`[data-add="${tid}"] input`)?.focus()});
+dp.addEventListener("input",e=>{const t=e.target;
+  if(t.dataset.rep){fit(t);edit(sel,d=>{d.rep=d.rep||{};d.rep[t.dataset.rep]=t.value},700);renderCal();markSaved()}
+
+  else if(t.id==="hs"||t.id==="he"){edit(sel,d=>{d[t.id==="hs"?"start":"end"]=t.value},700)}});
+function markSaved(){const s=$("#saved");if(s)s.textContent="Guardado "+new Date().toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"})}
+const secText=(d,g)=>[g.h].concat(g.f.map(([k,l])=>`${l}: ${(d.rep?.[k]||"").trim()||"NIL"}`)).join("\n");
+function repText(d){return RDO.map(g=>secText(d,g)).join("\n\n")}
+async function copyText(t,label){let ok=false;
+  try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
+  if(!ok){try{const a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;left:0;opacity:0";document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);ok=document.execCommand("copy");a.remove()}catch(e){}}
+  if(ok){toast(label+" copiado");return}
+  mbox.innerHTML=`<h3 id="mt">${esc(label)}</h3><p>Selecione o texto e copie (Ctrl+C, ou tocar sem largar → Copiar).</p><textarea class="cpbox" id="cpb" readonly></textarea><div class="bar" style="justify-content:flex-end"><button class="btn" id="mx">Fechar</button></div>`;
+  mod.classList.add("on");const b=$("#cpb");b.value=t;b.focus();b.select()}
+const fit=t=>{t.style.height="auto";t.style.height=t.scrollHeight+2+"px"};
+/* checklist editor */
+function confirmDel(t){mbox.innerHTML=`<h3 id="mt">Apagar “${esc(t.t)}”?</h3><p>${TPL.some(x=>x.id===t.id)?"É uma checklist original — pode repô-la mais tarde em “Editar checklists”.":"Esta checklist e os seus itens serão apagados."}</p><div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mx">Cancelar</button><button class="btn" id="mdel" style="background:#dc2626">Apagar</button></div>`;
+  mod.classList.add("on");$("#mdel").onclick=()=>{if(TPL.some(x=>x.id===t.id)){cfg.hidden=(cfg.hidden||[]).concat(t.id)}else{cfg.lists=(cfg.lists||[]).filter(x=>x.id!==t.id);delete cfg.extra[t.id]}saveCfg();closeM();renderDay();renderCal();toast("Checklist apagada")}}
+function newList(g){let col=SW[(cfg.lists||[]).length%SW.length],ic="list";
+  const draw=()=>{mbox.innerHTML=`<h3 id="mt">Nova checklist</h3><p>Fica em todos os dias. Depois de criar, acrescente os itens.</p>
+  <div class="fld"><label for="nl1">Nome</label><input id="nl1" placeholder="Ex.: Bird strike, Greve, Night stop LAD" value="${esc($("#nl1")?.value||"")}"></div>
+  <div class="fld"><label>Grupo</label><div class="seg">${["Turno","IROPS"].map(x=>`<button class="sb${g===x?" on":""}" data-g="${x}" style="--c:var(--acc)">${x}</button>`).join("")}</div></div>
+  <div class="fld"><label>Cor</label><div class="sws">${SW.map(c=>`<button class="sw${c===col?" on":""}" data-sw="${c}" style="background:${c}" aria-label="Cor ${c}"></button>`).join("")}</div></div>
+  <div class="fld"><label>Ícone</label><div class="sws">${ICK.map(k=>`<button class="icb${k===ic?" on":""}" data-ic="${k}" style="--k:${col}" aria-label="${k}">${svg(k)}</button>`).join("")}</div></div>
+  <div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mx">Cancelar</button><button class="btn" id="mnew" style="background:${col}">Criar checklist</button></div>`};
+  draw();mod.classList.add("on");$("#nl1").focus();
+  mbox.onclick=e=>{const a=e.target.closest("[data-g]"),b=e.target.closest("[data-sw]"),c=e.target.closest("[data-ic]");
+    if(a)g=a.dataset.g;if(b)col=b.dataset.sw;if(c)ic=c.dataset.ic;if(a||b||c){draw();return}
+    if(e.target.id==="mnew"){const n=$("#nl1").value.trim();if(!n){$("#nl1").focus();return}const id="u"+Date.now().toString(36);
+      cfg.lists=(cfg.lists||[]).concat({id,g,t:n.slice(0,40),c:col,ic,i:[]});saveCfg();mbox.onclick=null;closeM();chk=id;editing=false;tab="chk";renderDay();setTimeout(()=>document.querySelector(`[data-add="${id}"] input`)?.focus(),50)}};}
+/* import */
+const mod=$("#mod"),mbox=$("#mbox");let parsed=null;
+const closeM=()=>{mod.classList.remove("on");parsed=null;mbox.onclick=null};
+mod.addEventListener("click",e=>{if(e.target===mod)closeM()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&mod.classList.contains("on"))closeM()});
+function step1(err){mbox.innerHTML=`<h3 id="mt">Importar escala</h3><p>Excel ou PDF da escala. A app procura o seu nome e lê os códigos dos turnos; na primeira vez diz-lhe o que é cada código.</p>
+  <div class="fld"><label for="pname">O seu nome ou número, como aparece na escala</label><input id="pname" value="${esc(cfg.name||"")}" placeholder="Ex.: R. Silva ou 12345"></div>
+  <label class="drop" id="drop">Escolher ficheiro<small>.xlsx · .xls · .csv · .pdf</small><input type="file" id="pf" accept=".pdf,.xlsx,.xls,.csv,application/pdf"></label>
+  ${err?`<p class="err">${esc(err)}</p>`:""}<div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mx">Cancelar</button></div>`;mod.classList.add("on")}
+$("#impBtn").onclick=()=>step1();
+const loadJs=src=>new Promise((ok,no)=>{if(document.querySelector(`script[src="${src}"]`))return ok();const t=document.createElement("script");t.src=src;t.onload=ok;t.onerror=()=>no(new Error("load"));document.head.appendChild(t)});
+const nrm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const matchName=(c,nn)=>{const cn=nrm(c);return !!nn&&!!cn&&(cn===nn||cn.includes(nn)||nn.split(" ").every(t=>t&&cn.includes(t)))};
+async function readPdf(buf){await loadJs("vendor/pdf.min.js");const lib=window.pdfjsLib;lib.GlobalWorkerOptions.workerSrc="vendor/pdf.worker.min.js";
+  const pdf=await lib.getDocument({data:buf}).promise;const pages=[];
+  for(let i=1;i<=Math.min(pdf.numPages,12);i++){const pg=await pdf.getPage(i);const tc=await pg.getTextContent();const its=[];
+    tc.items.forEach(t=>{const s=t.str;if(!s.trim())return;const x0=t.transform[4],w=t.width||s.length*5,y=t.transform[5];
+      const re=/\S+/g;let m;while(m=re.exec(s)){its.push({x:x0+w*m.index/s.length,w:w*m[0].length/s.length,y,s:m[0]})}});
+    its.sort((a,b)=>b.y-a.y||a.x-b.x);const rows=[];
+    its.forEach(t=>{const r=rows.find(r=>Math.abs(r.y-t.y)<3);if(r)r.it.push(t);else rows.push({y:t.y,it:[t]})});
+    rows.forEach(r=>r.it.sort((a,b)=>a.x-b.x));pages.push(rows)}
+  return pages}
+async function readXls(buf){await loadJs("vendor/xlsx.full.min.js");const wb=XLSX.read(buf,{type:"array",cellDates:true});
+  return wb.SheetNames.map(n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:false,dateNF:"yyyy-mm-dd",defval:"",blankrows:false}).map(r=>r.map(c=>String(c??"").trim())))}
+const MES={jan:1,fev:2,feb:2,mar:3,abr:4,apr:4,mai:5,may:5,jun:6,jul:7,ago:8,aug:8,set:9,sep:9,out:10,oct:10,nov:11,dez:12,dec:12};
+function pDay(c){c=String(c).trim();let m;
+  if(m=c.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/))return{d:+m[3],m:+m[2],y:+m[1]};
+  if(m=c.match(/^(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{2,4}))?$/))return{d:+m[1],m:+m[2],y:m[3]?(m[3].length===2?2000+(+m[3]):+m[3]):0};
+  if((m=c.match(/^(\d{1,2})[\s.\/-]*([a-zA-ZçÇ]{3})/))&&MES[nrm(m[2]).slice(0,3)])return{d:+m[1],m:MES[nrm(m[2]).slice(0,3)],y:0};
+  if(m=nrm(c).match(/^(?:[a-z]{1,4}\.?\s*)?(\d{1,2})(?:\s*[a-z]{1,4}\.?)?$/)){const d=+m[1];if(d>=1&&d<=31)return{d,m:0,y:0}}
+  return null}
+const transpose=rows=>{const n=Math.max(0,...rows.map(r=>r.length));return Array.from({length:n},(_,j)=>rows.map(r=>r[j]||""))};
+function parseGrid(rows,name){const nn=nrm(name);const pi=rows.findIndex(r=>r.some(c=>matchName(c,nn)));if(pi<0)return null;
+  const nameCol=rows[pi].findIndex(c=>matchName(c,nn));let best=null;
+  for(let i=pi-1;i>=Math.max(0,pi-60);i--){const cols={};let n=0;rows[i].forEach((c,j)=>{if(j===nameCol)return;const p=pDay(c);if(p){cols[j]=p;n++}});if(n>=5&&(!best||n>best.n))best={n,cols}}
+  if(!best)return{person:rows[pi][nameCol],cells:[]};
+  return{person:rows[pi][nameCol],cells:Object.keys(best.cols).map(Number).sort((a,b)=>a-b).map(j=>({...best.cols[j],code:(rows[pi][j]||"").trim()}))}}
+function parsePdf(pages,name){const nn=nrm(name);
+  for(const rows of pages){const pi=rows.findIndex(r=>matchName(r.it.map(t=>t.s).join(" "),nn));if(pi<0)continue;
+    let best=null;for(let i=pi-1;i>=0;i--){const hs=rows[i].it.map(t=>({p:pDay(t.s),x:t.x+t.w/2})).filter(h=>h.p);if(hs.length>=5&&(!best||hs.length>best.length))best=hs}
+    const row=rows[pi].it;let nameEnd=-1,acc="";for(const t of row){acc+=(acc?" ":"")+t.s;if(matchName(acc,nn)){nameEnd=t.x+t.w;break}}
+    const person=row.filter(t=>t.x+t.w<=nameEnd+1).map(t=>t.s).join(" ");
+    if(!best)return{person,cells:[]};
+    const hs=best.sort((a,b)=>a.x-b.x),gap=hs.length>1?(hs[hs.length-1].x-hs[0].x)/(hs.length-1):30,codes=hs.map(()=>[]);
+    row.forEach(t=>{const cx=t.x+t.w/2;if(cx<=nameEnd)return;let bi=-1,bd=1e9;hs.forEach((h,k)=>{const d=Math.abs(h.x-cx);if(d<bd){bd=d;bi=k}});if(bi>=0&&bd<gap*.6)codes[bi].push(t.s)});
+    return{person,cells:hs.map((h,k)=>({...h.p,code:codes[k].join(" ")}))}}
+  return null}
+const MESF=["janeiro","fevereiro","marco","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"],MESE=["january","february","march","april","may","june","july","august","september","october","november","december"];
+function detMonth(text){const t=nrm(text);let m=0;for(let i=0;i<12&&!m;i++)if(t.includes(MESF[i])||t.includes(MESE[i]))m=i+1;
+  const ym=t.match(/\b(20\d\d)\b/);const now=new Date();let y=ym?+ym[1]:now.getFullYear();if(!m)m=now.getMonth()+1;if(!ym&&m<now.getMonth()-1)y++;return{y,m,found:!!m}}
+function guess(code){const c=nrm(code);if(!c)return null;const sv=(cfg.codes||{})[c];if(sv)return clone(sv);
+  const t=code.match(/(\d{1,2})[:h]?(\d{2})\s*[-–\/]\s*(\d{1,2})[:h]?(\d{2})/);
+  if(t){const h=+t[1];return{s:h>=4&&h<12?"M":h>=12&&h<20?"T":"N",h:[p2(+t[1])+":"+t[2],p2(+t[3])+":"+t[4]]}}
+  if(/^(do|rdo|f|fo|fg|off|folga|l|lv|livre|desc|dsc|r|rest|dr|dc|fds)$/.test(c))return{s:"F"};
+  if(/^(fer|ferias|v|vac|al|lic|ll)/.test(c))return{s:"V"};
+  if(/^m/.test(c))return{s:"M"};if(/^(t|a)/.test(c))return{s:"T"};if(/^n/.test(c))return{s:"N"};return null}
+let imp=null;
+mbox.addEventListener("click",e=>{if(e.target.id==="mx")closeM();if(e.target.id==="mback")step1();if(e.target.id==="mok")applyImp();
+  const mb=e.target.closest("[data-ms]");if(mb&&imp){const c=mb.closest("[data-code]").dataset.code,k=mb.dataset.ms;const cur=imp.map[c]||{};cur.s=k;if(SK[k]?.h&&!cur.h)cur.h=SK[k].h.slice();if(!SK[k]?.h)delete cur.h;imp.map[c]=cur;keepMon();step2()}
+  if(e.target.id==="mcont")buildImp()});
+mbox.addEventListener("input",e=>{const t=e.target;if(t.dataset.hs!=null||t.dataset.he!=null){const c=t.closest("[data-code]").dataset.code;const m=imp.map[c];m.h=m.h||["",""];m.h[t.dataset.hs!=null?0:1]=t.value}});
+const keepMon=()=>{const v=$("#imon")?.value;if(v){const [y,m]=v.split("-").map(Number);imp.mon={y,m}}};
+mbox.addEventListener("dragover",e=>{const d=e.target.closest(".drop");if(d){e.preventDefault();d.classList.add("over")}});
+mbox.addEventListener("drop",e=>{const d=e.target.closest(".drop");if(d&&e.dataTransfer.files[0]){e.preventDefault();handle(e.dataTransfer.files[0])}});
+mbox.addEventListener("change",e=>{if(e.target.id==="pf"&&e.target.files[0])handle(e.target.files[0])});
+async function handle(f){const name=($("#pname")?.value||"").trim();if(name!==(cfg.name||"")){cfg.name=name;saveCfg()}
+  if(!name){step1("Escreva o seu nome ou número como aparece na escala.");return}
+  mbox.innerHTML=`<h3 id="mt">A ler a escala…</h3><p>${esc(f.name)}</p><div class="spin"></div>`;
+  try{const buf=await f.arrayBuffer();const ext=f.name.split(".").pop().toLowerCase();let res=null,txt="";
+    try{if(ext==="pdf"){const pages=await readPdf(buf);res=parsePdf(pages,name);txt=pages.flat().map(r=>r.it.map(t=>t.s).join(" ")).join(" ")}
+      else{const sh=await readXls(buf);for(const rows of sh){const r=parseGrid(rows,name);const r2=(!r||!r.cells.length)?parseGrid(transpose(rows),name):null;const b=(r2&&r2.cells.length)?r2:r;if(b&&(!res||b.cells.length>res.cells.length))res=b}txt=sh.flat(2).slice(0,3000).join(" ")}}
+    catch(err){throw new Error("Não consegui abrir o ficheiro. Confirme que é um Excel ou PDF válido (um PDF digitalizado como imagem não pode ser lido).")}
+    if(!res)throw new Error(`Não encontrei “${name}” no ficheiro. Experimente só o apelido ou o número de funcionário.`);
+    if(!res.cells.length)throw new Error("Encontrei o seu nome mas não consegui identificar a linha das datas (1, 2, 3… ou 01/12…).");
+    const det=detMonth(txt);imp={person:res.person,cells:res.cells,needM:res.cells.some(c=>!c.m),mon:det,map:{}};
+    [...new Set(res.cells.map(c=>c.code).filter(Boolean))].forEach(c=>imp.map[c]=guess(c)||{s:""});
+    step2()}
+  catch(err){step1(err.message||"Erro ao ler a escala.")}}
+function step2(){const codes=Object.keys(imp.map),cnt={};imp.cells.forEach(c=>{if(c.code)cnt[c.code]=(cnt[c.code]||0)+1});
+  const opts=[...ST,{k:"X",n:"Ignorar"}];
+  mbox.innerHTML=`<h3 id="mt">Códigos encontrados</h3><p>${imp.person?"Pessoa: <b>"+esc(imp.person)+"</b> · ":""}${imp.cells.length} dias. Confirme o que é cada código — fica guardado para as próximas vezes.</p>
+  ${imp.needM?`<div class="fld"><label for="imon">Mês do primeiro dia da escala</label><input type="month" id="imon" value="${imp.mon.y}-${p2(imp.mon.m)}"></div>`:""}
+  <div class="maps">${codes.length?codes.map(c=>{const m=imp.map[c]||{};return `<div class="mp${m.s?"":" need"}" data-code="${esc(c)}"><div class="mph"><span class="chip" style="--c:${m.s&&SK[m.s]?`var(--${m.s})`:"#64748b"}">${esc(c.slice(0,6))}</span><small>${cnt[c]||0}×</small></div>
+    <div class="seg">${opts.map(o=>`<button class="sb${m.s===o.k?" on":""}" data-ms="${o.k}" style="--c:${SK[o.k]?`var(--${o.k})`:"#64748b"}">${o.n}</button>`).join("")}</div>
+    ${m.h?`<div class="hrs">Horário <input type="time" data-hs value="${esc(m.h[0])}" aria-label="Início"> até <input type="time" data-he value="${esc(m.h[1])}" aria-label="Fim"></div>`:""}</div>`}).join(""):`<p class="err">Não encontrei códigos de turno na sua linha.</p>`}</div>
+  <p class="err" id="merr"></p>
+  <div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mback">Outro ficheiro</button><button class="btn" id="mcont">Continuar</button></div>`}
+function buildImp(){keepMon();const miss=Object.keys(imp.map).filter(c=>!imp.map[c].s);
+  if(miss.length){$("#merr").textContent="Escolha o tipo para: "+miss.join(", ");return}
+  cfg.codes=cfg.codes||{};Object.entries(imp.map).forEach(([c,m])=>cfg.codes[nrm(c)]=clone(m));saveCfg();
+  let y=imp.mon.y,m=imp.mon.m,prev=0;const out=[];
+  imp.cells.forEach(c=>{let cy=c.y,cm=c.m;if(!cm){if(prev&&c.d<prev-20){m++;if(m>12){m=1;y++}}cm=m;cy=y}else{if(!cy)cy=y;y=cy;m=cm}prev=c.d;
+    const dt=new Date(cy,cm-1,c.d);if(dt.getDate()!==c.d)return;const mp=imp.map[c.code];if(!c.code||!mp||mp.s==="X")return;
+    out.push({date:key(dt),code:c.code,shift:mp.s,start:mp.h?.[0]||"",end:mp.h?.[1]||""})});
+  if(!out.length){$("#merr").textContent="Nenhum dia com turno para importar.";return}
+  parsed={days:out.sort((a,b)=>a.date.localeCompare(b.date)),person:imp.person,notes:""};step3()}
+function step3(){const ds=parsed.days,ov=ds.filter(d=>days[d.date]?.shift&&days[d.date].shift!==d.shift).length;
+  const cnt={};ds.forEach(d=>cnt[d.shift]=(cnt[d.shift]||0)+1);
+  mbox.innerHTML=`<h3 id="mt">${ds.length} dias encontrados</h3><p>${parsed.person?"Pessoa: <b>"+esc(parsed.person)+"</b> · ":""}${esc(fromKey(ds[0].date).toLocaleDateString("pt-PT"))} a ${esc(fromKey(ds[ds.length-1].date).toLocaleDateString("pt-PT"))} · ${ST.filter(s=>cnt[s.k]).map(s=>s.n+" "+cnt[s.k]).join(" · ")}</p>
+  ${parsed.notes?`<p>${esc(parsed.notes)}</p>`:""}
+  <div class="prev">${ds.map(d=>{const s=SK[d.shift],o=days[d.date]?.shift;return `<div class="pr"><span class="chip" style="--c:var(--${s.k})">${esc((d.code||s.k).slice(0,4))}</span><span class="d">${esc(fromKey(d.date).toLocaleDateString("pt-PT",{weekday:"short",day:"numeric",month:"short"}))}</span><span class="mono">${d.start?esc(d.start)+"–"+esc(d.end):esc(s.n)}</span>${o&&o!==d.shift?`<small style="color:var(--mute)">era ${esc(SK[o]?.n||o)}</small>`:""}</div>`}).join("")}</div>
+  ${ov?`<label class="chk"><input type="checkbox" id="mrep" checked> Substituir ${ov} dia(s) que já tinham outro turno</label>`:""}
+  <div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mback">Outro ficheiro</button><button class="btn" id="mok">Importar ${ds.length} dias</button></div>`}
+function applyImp(){if(!parsed)return;const rep=$("#mrep")?$("#mrep").checked:true;let n=0;
+  parsed.days.forEach(x=>{const cur=days[x.date];if(cur?.shift&&cur.shift!==x.shift&&!rep)return;
+    edit(x.date,d=>{d.shift=x.shift;d.code=String(x.code||"").slice(0,6);const h=SK[x.shift].h;d.start=x.start||(h?h[0]:"");d.end=x.end||(h?h[1]:"");if(!h){d.start="";d.end=""}});n++});
+  const f=fromKey(parsed.days[0].date);month=new Date(f.getFullYear(),f.getMonth(),1);closeM();render();toast(n+" dias importados")}
+const tick=()=>{$("#clk").innerHTML=new Date().toISOString().slice(11,16)+"<small>UTC</small>"};tick();setInterval(tick,10000);
+/* settings & login */
+function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}):"—";
+  mbox.innerHTML=`<h3 id="mt">Definições</h3>
+  <div class="fld"><label>O seu código pessoal</label><div style="display:flex;gap:8px"><input id="skey" type="password" readonly value="${esc(KEY)}" class="mono"><button class="btn sec" id="sshow" style="flex:none">Ver</button><button class="btn sec" id="scopy" style="flex:none">Copiar</button></div>
+  <p style="margin:6px 0 0">Use este código para entrar noutros dispositivos. Não o partilhe — quem o tiver vê os seus dados.</p></div>
+  <div class="fld"><label>Sincronização</label><p style="margin:0">${live?"Ligado":"Sem ligação"} · última ${ls} · ${dirty.size} alteração(ões) por enviar</p></div>
+  <div class="fld"><label>Instalar no ecrã principal</label><p style="margin:0">iPhone: Safari → Partilhar → “Adicionar ao ecrã principal”. PC: Chrome/Edge → ícone de instalar na barra de endereço. Depois funciona sem rede.</p></div>
+  <details class="fld"><summary style="cursor:pointer;font-weight:600">Avançado</summary><label for="sapi" style="margin-top:8px">Servidor</label><input id="sapi" value="${esc(API)}"></details>
+  <div class="bar" style="justify-content:space-between"><button class="btn sec" id="sout" style="color:#dc2626">Sair deste dispositivo</button><button class="btn" id="mx">Fechar</button></div>`;mod.classList.add("on")}
+$("#setBtn").onclick=settings;
+mbox.addEventListener("click",async e=>{const id=e.target.id;
+  if(id==="sshow"){const k=$("#skey");k.type=k.type==="password"?"text":"password"}
+  if(id==="scopy")copyText(KEY,"Código");
+  if(id==="sout"){if(dirty.size&&!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent="Há dados por enviar — tocar outra vez para sair";return}
+    try{localStorage.removeItem(LK);localStorage.removeItem("occ-key")}catch(_){}KEY="";cfg={extra:{}};days={};dirty=new Set();closeM();render();showLogin()}});
+mbox.addEventListener("change",e=>{if(e.target.id==="sapi"){API=e.target.value.trim()||API_DEF;try{localStorage.setItem("occ-api",API)}catch(_){}sync()}});
+const lg=$("#login");
+function showLogin(msg){lg.classList.add("on");$("#lerr").textContent=msg||"";setTimeout(()=>$("#lk").focus(),50)}
+function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(12);crypto.getRandomValues(r);let s="OCC";for(let i=0;i<12;i++){if(i%4===0)s+="-";s+=A[r[i]%A.length]}return s}
+$("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
+$("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
+  if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
+function startWith(k){KEY=k;try{localStorage.setItem("occ-key",k)}catch(_){}LK="occ-"+fnv(k);loadLocal();lg.classList.remove("on");render();setSync(false,"A ligar…");sync()}
+if(KEY)startWith(KEY);else{render();showLogin()}
+setInterval(()=>{if(document.visibilityState==="visible")sync()},30000);
+addEventListener("online",sync);addEventListener("offline",()=>setSync(false,"Offline · guardado no dispositivo"));
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")sync()});
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
