@@ -146,7 +146,21 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .ci.on{background:color-mix(in srgb,var(--k) 10%,var(--card))}
 .ci.on .cn{background:var(--k);color:#fff}
 .ci.on .t{color:var(--mute);text-decoration:line-through}
-.x{color:var(--mute);width:36px;height:36px;border-radius:8px}
+.x{color:var(--mute);width:36px;height:36px;border-radius:8px;flex:none}
+.ci.hs{margin-bottom:2px}
+.subw{list-style:none;margin:0 0 6px}
+.sub{list-style:none;margin:0;padding:0 0 0 44px}
+.cs{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;min-height:42px;font-size:15px;user-select:none}
+.cs:hover{background:var(--card2)}
+.sbx{flex:none;width:20px;height:20px;border-radius:6px;border:2px solid color-mix(in srgb,var(--k) 70%,var(--mute));display:grid;place-items:center}
+.cs.on .sbx{background:var(--k);border-color:var(--k)}
+.cs.on .sbx::after{content:"";width:9px;height:5px;border:solid #fff;border-width:0 0 2px 2px;transform:rotate(-45deg) translate(1px,-1px)}
+.cs.on .t{color:var(--mute);text-decoration:line-through}
+.ce,.ces{display:flex;align-items:center;gap:10px;padding:6px 8px;margin-bottom:4px;list-style:none}
+.ces{padding-left:52px}
+.ein{flex:1;min-height:42px;font-size:15px}
+.adds{display:flex;gap:8px;padding:0 8px 10px 52px}
+.adds input{flex:1;min-height:40px;font-size:15px}
 .rdoq{margin:4px 10px 10px;padding:12px;border-radius:12px;border:2px dashed color-mix(in srgb,var(--k) 50%,var(--line));display:grid;gap:8px}
 .rdoq b{font-size:14px}
 .rdoq div{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px}
@@ -315,8 +329,10 @@ async function sync(){if(!KEY)return;if(syncing){syncAgain=true;return}
 function setSync(on,t){const s=$("#sync");s.classList.toggle("on",on);s.innerHTML="<i></i>"+esc(t)}
 function edit(k,fn,wait){const d=clone(getDay(k));fn(d);d.updated=new Date().toISOString();days[k]=d;saveDay(k,wait)}
 const hasRep=d=>d&&Object.values(d.rep||{}).some(v=>v&&String(v).trim());
-const items=t=>{const h=(cfg.hideIt||{})[t.id]||[];return t.i.map((x,n)=>({id:"b"+n,t:x})).filter(i=>!h.includes(i.id)).concat((cfg.extra?.[t.id]||[]).map(x=>({id:x.id,t:x.t,x:1})))};
-const doneOf=(d,t)=>{const c=(d.checks||{})[t.id]||[];return items(t).filter(i=>c.includes(i.id)).length};
+const items=t=>{const h=(cfg.hideIt||{})[t.id]||[],rn=(cfg.ren||{})[t.id]||{};return t.i.map((x,n)=>({id:"b"+n,t:rn["b"+n]||x})).filter(i=>!h.includes(i.id)).concat((cfg.extra?.[t.id]||[]).map(x=>({id:x.id,t:x.t,x:1})))};
+const subsOf=(t,iid)=>(((cfg.subs||{})[t.id]||{})[iid]||[]).map(x=>({id:iid+"."+x.id,sid:x.id,t:x.t}));
+const pts=t=>items(t).flatMap(i=>[i,...subsOf(t,i.id)]);
+const doneOf=(d,t)=>{const c=(d.checks||{})[t.id]||[];return pts(t).filter(i=>c.includes(i.id)).length};
 /* calendar */
 const SIC={M:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
   T:'<path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 9V3M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 6l-4 3-4-3"/>',
@@ -345,7 +361,7 @@ function renderCal(){
 /* day panel */
 function renderDay(){
   const d=getDay(sel),dt=fromKey(sel),s=SK[d.shift];
-  const nC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+doneOf(d,t),0),tC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+items(t).length,0);
+  const nC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+doneOf(d,t),0),tC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+pts(t).length,0);
   const title=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"});
   $("#dp").innerHTML=`<div class="dh"><h2>${esc(title.charAt(0).toUpperCase()+title.slice(1))}<small>${sel===todayK?"Hoje · ":""}${s?esc(s.n)+(d.code?" "+esc(d.code):"")+(d.start?` · <span class="mono" id="dsub">${esc(d.start)}–${esc(d.end)}</span>`:""):"Sem turno marcado"}</small></h2>
     ${showEd?`<div class="seg">${ST.map(x=>`<button class="sb${d.shift===x.k?" on":""}" data-s="${x.k}" style="--c:var(--${x.k})"><i></i>${x.n}</button>`).join("")}</div>`:""}
@@ -356,13 +372,19 @@ function repPane(d){return RDO.map((g,gi)=>`<div class="rsec"><h3><span>${g.h}</
   `<div class="cpb2">${RDO.map((g,gi)=>`<button class="btn" data-cp="${gi}">Copiar ${g.h}</button>`).join("")}</div><div class="bar"><button class="btn sec" id="copy">Copiar tudo</button><button class="btn sec" id="pdf">⇩ PDF do RDO</button><span class="saved" id="saved">${d.updated?"Guardado "+new Date(d.updated).toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}):""}</span></div>`}
 function chkPane(d){
   if(chk&&!allT().some(x=>x.id===chk))chk=null;
-  if(chk){const t=allT().find(x=>x.id===chk),it=items(t),n=doneOf(d,t),c=(d.checks||{})[t.id]||[],pc=it.length?Math.round(n/it.length*100):0;
-    return `<div class="cd" style="--k:${t.c}"><div class="cdh"><button class="cbk" data-back aria-label="Voltar">${svg("back")}</button><span class="cic">${svg(t.ic)}</span><div class="cdt"><b>${esc(t.t)}</b><span>${it.length&&n===it.length?"Concluída ✓":n+" de "+it.length+" feitos"}</span></div><button class="crs${editing?" on":""}" data-edit aria-pressed="${editing}">${editing?"OK":"Editar"}</button><button class="crs" data-reset="${t.id}">Reset</button></div>
+  if(chk){const t=allT().find(x=>x.id===chk),it=items(t),N=pts(t).length,n=doneOf(d,t),c=(d.checks||{})[t.id]||[],pc=N?Math.round(n/N*100):0;
+    return `<div class="cd" style="--k:${t.c}"><div class="cdh"><button class="cbk" data-back aria-label="Voltar">${svg("back")}</button><span class="cic">${svg(t.ic)}</span><div class="cdt"><b>${esc(t.t)}</b><span>${N&&n===N?"Concluída ✓":n+" de "+N+" feitos"}</span></div><button class="crs${editing?" on":""}" data-edit aria-pressed="${editing}">${editing?"OK":"Editar"}</button><button class="crs" data-reset="${t.id}">Reset</button></div>
     <div class="cpg"><i style="width:${pc}%"></i></div>
-    <ol class="cit">${it.length?"":`<p class="empty" style="padding:8px 4px">Sem itens. Adicione o primeiro em baixo.</p>`}${it.map((i,ix)=>`<li class="ci${c.includes(i.id)?" on":""}" role="checkbox" tabindex="0" aria-checked="${c.includes(i.id)}" data-c="${t.id}|${i.id}"><span class="cn">${c.includes(i.id)?"✓":ix+1}</span><span class="t">${esc(i.t)}</span>${editing?`<button class="x" data-del="${t.id}|${i.id}" aria-label="Apagar item">✕</button>`:""}</li>`).join("")}</ol>
+    <ol class="cit">${it.length?"":`<p class="empty" style="padding:8px 4px">Sem itens. Adicione o primeiro em baixo.</p>`}${it.map((i,ix)=>{const su=subsOf(t,i.id);
+      if(editing)return `<li class="ce"><span class="cn">${ix+1}</span><input class="ein" data-ren="${t.id}|${i.id}" value="${esc(i.t)}" aria-label="Texto do item ${ix+1}"><button class="x" data-del="${t.id}|${i.id}" aria-label="Apagar item">✕</button></li>
+        ${su.map(x=>`<li class="ces"><span class="sbx"></span><input class="ein" data-sren="${t.id}|${i.id}|${x.sid}" value="${esc(x.t)}" aria-label="Ponto"><button class="x" data-sdel="${t.id}|${i.id}|${x.sid}" aria-label="Apagar ponto">✕</button></li>`).join("")}
+        <li><form class="adds" data-addsub="${t.id}|${i.id}"><input placeholder="＋ Ponto dentro deste item" aria-label="Novo ponto no item ${ix+1}"><button class="btn sec" style="flex:none;height:40px">+</button></form></li>`;
+      return `<li class="ci${c.includes(i.id)?" on":""}${su.length?" hs":""}" role="checkbox" tabindex="0" aria-checked="${c.includes(i.id)}" data-c="${t.id}|${i.id}"><span class="cn">${c.includes(i.id)?"✓":ix+1}</span><span class="t">${esc(i.t)}</span></li>
+        ${su.length?`<li class="subw"><ul class="sub">${su.map(x=>`<li class="cs${c.includes(x.id)?" on":""}" role="checkbox" tabindex="0" aria-checked="${c.includes(x.id)}" data-c="${t.id}|${x.id}"><span class="sbx"></span><span class="t">${esc(x.t)}</span></li>`).join("")}</ul></li>`:""}`}).join("")}</ol>
+    ${editing?`<p class="note" style="margin:0 12px 8px">Toque num texto para o alterar. Use “＋ Ponto” para acrescentar pontos dentro de um item.</p>`:""}
     ${t.rdo?`<form class="rdoq" data-rdodiv><b>Enviar para o RDO · Diverted Flights</b><div><input id="dv1" placeholder="Voo (TP1234)" aria-label="Voo"><input id="dv2" placeholder="Alternante (OPO)" aria-label="Alternante"><input id="dv3" placeholder="Motivo / solução" aria-label="Motivo"></div><button class="btn" style="background:var(--k)">Adicionar ao RDO</button></form>`:""}
     <form class="addi" data-add="${t.id}"><input placeholder="Adicionar item a esta checklist" aria-label="Novo item"><button class="btn sec" style="flex:none">+</button></form></div>`}
-  const tile=t=>{const it=items(t),n=doneOf(d,t),pc=it.length?n/it.length*100:0;return `<div class="tlw"><button class="tl${n===it.length&&it.length?" full":""}" data-oc="${t.id}" style="--k:${t.c}"><span class="tic">${svg(t.ic)}</span><span class="tnm">${esc(t.t)}</span><span class="tpr"><span class="tbar"><i style="width:${pc}%"></i></span>${n===it.length&&it.length?"✓":n+"/"+it.length}</span></button>${editing?`<button class="tdel" data-dl="${t.id}" aria-label="Apagar ${esc(t.t)}">✕</button>`:""}</div>`};
+  const tile=t=>{const it=pts(t),n=doneOf(d,t),pc=it.length?n/it.length*100:0;return `<div class="tlw"><button class="tl${n===it.length&&it.length?" full":""}" data-oc="${t.id}" style="--k:${t.c}"><span class="tic">${svg(t.ic)}</span><span class="tnm">${esc(t.t)}</span><span class="tpr"><span class="tbar"><i style="width:${pc}%"></i></span>${n===it.length&&it.length?"✓":n+"/"+it.length}</span></button>${editing?`<button class="tdel" data-dl="${t.id}" aria-label="Apagar ${esc(t.t)}">✕</button>`:""}</div>`};
   const addT=g=>editing?`<button class="tl tadd" data-new="${g}">${svg("plus")}<span class="tnm">Nova checklist</span></button>`:"";
   const hid=(cfg.hidden||[]).length;
   return `<div class="gtop"><span class="grp" style="margin:0">Turno</span><button class="pill" data-edit aria-pressed="${editing}">${editing?"✓ Concluir edição":"✎ Editar checklists"}</button></div>
@@ -397,16 +419,24 @@ dp.addEventListener("click",async e=>{
   const rs=e.target.closest("[data-reset]");if(rs){const tid=rs.dataset.reset;edit(sel,d=>{d.checks=d.checks||{};d.checks[tid]=[]});renderDay();renderCal();return}
   const del=e.target.closest("[data-del]");if(del){const [tid,iid]=del.dataset.del.split("|");
     if(iid.startsWith("b")){cfg.hideIt=cfg.hideIt||{};(cfg.hideIt[tid]=cfg.hideIt[tid]||[]).push(iid)}else cfg.extra[tid]=(cfg.extra[tid]||[]).filter(x=>x.id!==iid);saveCfg();renderDay();renderCal();return}
+  const sd=e.target.closest("[data-sdel]");if(sd){const [tid,iid,sid]=sd.dataset.sdel.split("|");cfg.subs[tid][iid]=cfg.subs[tid][iid].filter(x=>x.id!==sid);saveCfg();renderDay();renderCal();return}
   const c=e.target.closest("[data-c]");if(c){togC(c.dataset.c);return}
   if(e.target.id==="copy")copyText(repText(getDay(sel)),"RDO completo");
   if(e.target.id==="pdf")rdoPdf(getDay(sel));
   const cp=e.target.closest("[data-cp]");if(cp)copyText(secText(getDay(sel),RDO[+cp.dataset.cp]),RDO[+cp.dataset.cp].h);
 });
 function togC(v){const [tid,iid]=v.split("|");edit(sel,d=>{d.checks=d.checks||{};const a=d.checks[tid]||[];d.checks[tid]=a.includes(iid)?a.filter(x=>x!==iid):a.concat(iid)});renderDay();renderCal();const n=document.querySelector(`[data-c="${v}"]`);n&&n.focus({preventScroll:true})}
+dp.addEventListener("change",e=>{const t=e.target,v=(t.value||"").trim();
+  if(t.dataset.ren){if(!v){renderDay();return}const [tid,iid]=t.dataset.ren.split("|");
+    if(iid.startsWith("b")){cfg.ren=cfg.ren||{};(cfg.ren[tid]=cfg.ren[tid]||{})[iid]=v.slice(0,200)}else{const x=(cfg.extra[tid]||[]).find(x=>x.id===iid);if(x)x.t=v.slice(0,200)}saveCfg();toast("Item alterado")}
+  if(t.dataset.sren){if(!v){renderDay();return}const [tid,iid,sid]=t.dataset.sren.split("|");const x=(((cfg.subs||{})[tid]||{})[iid]||[]).find(x=>x.id===sid);if(x){x.t=v.slice(0,200);saveCfg();toast("Ponto alterado")}}});
 dp.addEventListener("keydown",e=>{const c=e.target.closest("[data-c]");if(c&&(e.key===" "||e.key==="Enter")){e.preventDefault();togC(c.dataset.c)}});
 dp.addEventListener("submit",e=>{e.preventDefault();
   if(e.target.closest("[data-rdodiv]")){const v=[$("#dv1").value,$("#dv2").value,$("#dv3").value].map(x=>x.trim()).filter(Boolean);if(!v.length)return;
     edit(sel,d=>{d.rep=d.rep||{};d.rep.div=(d.rep.div?d.rep.div.trim()+"; ":"")+v.join(" · ")});renderDay();renderCal();toast("Adicionado ao RDO");return}
+  const fs=e.target.closest("[data-addsub]");if(fs){const v=fs.querySelector("input").value.trim();if(!v)return;const [tid,iid]=fs.dataset.addsub.split("|");
+    cfg.subs=cfg.subs||{};cfg.subs[tid]=cfg.subs[tid]||{};(cfg.subs[tid][iid]=cfg.subs[tid][iid]||[]).push({id:"s"+Date.now().toString(36),t:v.slice(0,200)});saveCfg();renderDay();renderCal();
+    document.querySelector(`[data-addsub="${tid}|${iid}"] input`)?.focus();return}
   const f=e.target.closest("[data-add]");if(!f)return;const v=f.querySelector("input").value.trim();if(!v)return;
   const tid=f.dataset.add;(cfg.extra[tid]=cfg.extra[tid]||[]).push({id:"x"+Date.now().toString(36),t:v});saveCfg();renderDay();document.querySelector(`[data-add="${tid}"] input`)?.focus()});
 dp.addEventListener("input",e=>{const t=e.target;
@@ -647,7 +677,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="16";
+const APPV="17";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
@@ -665,13 +695,17 @@ async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){to
       doc.setFont("helvetica","normal");doc.setTextColor(v==="NIL"?130:13,v==="NIL"?140:27,v==="NIL"?150:42);doc.text(lines,M+4,y+6);doc.setTextColor(13,27,42);y+=bh+5});y+=4});
   const used=allT().filter(t=>((d.checks||{})[t.id]||[]).length);
   if(used.length){page(18);doc.setFillColor(15,27,41);doc.roundedRect(M,y,CW,9,1.5,1.5,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text("CHECKLISTS",M+4,y+6.2);y+=14;
-    used.forEach(t=>{const it=items(t),c=(d.checks||{})[t.id]||[],n=it.filter(i=>c.includes(i.id)).length;page(14);
+    used.forEach(t=>{const it=items(t),c=(d.checks||{})[t.id]||[],N=pts(t).length,n=pts(t).filter(i=>c.includes(i.id)).length;page(14);
       const hx=t.c.replace("#","");doc.setFillColor(parseInt(hx.slice(0,2),16),parseInt(hx.slice(2,4),16),parseInt(hx.slice(4,6),16));doc.rect(M,y-0.5,2.2,6,"F");
-      doc.setTextColor(13,27,42);doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.text(t.t,M+5,y+4);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(100,110,120);doc.text(`${n}/${it.length}${n===it.length?"  -  concluída":""}`,W-M,y+4,{align:"right"});y+=8;
+      doc.setTextColor(13,27,42);doc.setFont("helvetica","bold");doc.setFontSize(10.5);doc.text(t.t,M+5,y+4);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(100,110,120);doc.text(`${n}/${N}${n===N?"  -  concluída":""}`,W-M,y+4,{align:"right"});y+=8;
       it.forEach(i=>{const on=c.includes(i.id);doc.setFontSize(9.5);const lines=doc.splitTextToSize(i.t,CW-12);const h=lines.length*4.6+1.6;page(h);
         doc.setDrawColor(120,130,140);doc.setLineWidth(0.3);doc.rect(M+5,y,3.6,3.6);
         if(on){doc.setDrawColor(11,92,173);doc.setLineWidth(0.6);doc.line(M+5.7,y+1.9,M+6.6,y+2.9);doc.line(M+6.6,y+2.9,M+8.1,y+0.7);doc.setLineWidth(0.2)}
-        doc.setTextColor(on?13:110,on?27:120,on?42:130);doc.setFont("helvetica","normal");doc.text(lines,M+11,y+3);y+=h});
+        doc.setTextColor(on?13:110,on?27:120,on?42:130);doc.setFont("helvetica","normal");doc.text(lines,M+11,y+3);y+=h;
+        subsOf(t,i.id).forEach(x=>{const so=c.includes(x.id);doc.setFontSize(9);const sl=doc.splitTextToSize(x.t,CW-20);const sh=sl.length*4.3+1.4;page(sh);
+          doc.setDrawColor(150,160,170);doc.setLineWidth(0.25);doc.rect(M+12,y+0.3,3,3);
+          if(so){doc.setDrawColor(11,92,173);doc.setLineWidth(0.5);doc.line(M+12.6,y+1.9,M+13.4,y+2.7);doc.line(M+13.4,y+2.7,M+14.6,y+0.9);doc.setLineWidth(0.2)}
+          doc.setTextColor(so?13:110,so?27:120,so?42:130);doc.text(sl,M+17,y+2.9);y+=sh})});
       y+=4})}
   doc.setFontSize(8);doc.setTextColor(120,130,140);doc.text("Gerado em "+new Date().toISOString().slice(0,16).replace("T"," ")+" UTC · OCC Diário",M,290);
   const name=`RDO_${d.date}.pdf`,blob=doc.output("blob"),file=new File([blob],name,{type:"application/pdf"});
