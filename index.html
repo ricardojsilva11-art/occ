@@ -178,6 +178,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .lbox{width:min(400px,100%);background:var(--card);border-radius:20px;padding:26px;display:grid;gap:10px;box-shadow:0 20px 60px rgb(0 0 0/.35)}
 .lbox h2{margin:6px 0 0;font-size:26px}.lbox p{margin:0;color:var(--mute);font-size:14px}
 .lbox input{font-size:18px;letter-spacing:.04em;text-align:center}
+.sel{font-size:16px;border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:10px 12px;width:100%;min-height:44px;color:var(--ink)}
 .maps{display:grid;gap:10px;max-height:46vh;overflow:auto;margin-bottom:6px}
 .mp{border:1px solid var(--line);border-radius:12px;padding:10px}
 .mp.need{border-color:#f59e0b;background:color-mix(in srgb,#f59e0b 7%,var(--card))}
@@ -409,8 +410,8 @@ const mod=$("#mod"),mbox=$("#mbox");let parsed=null;
 const closeM=()=>{mod.classList.remove("on");parsed=null;mbox.onclick=null};
 mod.addEventListener("click",e=>{if(e.target===mod)closeM()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&mod.classList.contains("on"))closeM()});
-function step1(err){mbox.innerHTML=`<h3 id="mt">Importar escala</h3><p>Excel ou PDF da escala. A app procura o seu nome e lê os códigos dos turnos; na primeira vez diz-lhe o que é cada código.</p>
-  <div class="fld"><label for="pname">O seu nome ou número, como aparece na escala</label><input id="pname" value="${esc(cfg.name||"")}" placeholder="Ex.: R. Silva ou 12345"></div>
+function step1(err){mbox.innerHTML=`<h3 id="mt">Importar escala</h3><p>Excel ou PDF da escala. Mapa de Serviço (PDF) ou Escala Master (Excel): a app mostra a lista de pessoas, escolhe a sua linha e já conhece os códigos (M082, T034, 019N, TRNG…).</p>
+  <div class="fld"><label for="pname">Nome como aparece na escala <span style="font-weight:400;color:var(--mute)">(só para outros formatos)</span></label><input id="pname" value="${esc(cfg.name||"")}" placeholder="Ex.: R. Silva ou 12345"></div>
   <label class="drop" id="drop">Escolher ficheiro<small>.xlsx · .xls · .csv · .pdf</small><input type="file" id="pf" accept=".pdf,.xlsx,.xls,.csv,application/pdf"></label>
   ${err?`<p class="err">${esc(err)}</p>`:""}<div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mx">Cancelar</button></div>`;mod.classList.add("on")}
 $("#impBtn").onclick=()=>step1();
@@ -454,14 +455,69 @@ function parsePdf(pages,name){const nn=nrm(name);
 const MESF=["janeiro","fevereiro","marco","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"],MESE=["january","february","march","april","may","june","july","august","september","october","november","december"];
 function detMonth(text){const t=nrm(text);let m=0;for(let i=0;i<12&&!m;i++)if(t.includes(MESF[i])||t.includes(MESE[i]))m=i+1;
   const ym=t.match(/\b(20\d\d)\b/);const now=new Date();let y=ym?+ym[1]:now.getFullYear();if(!m)m=now.getMonth()+1;if(!ym&&m<now.getMonth()-1)y++;return{y,m,found:!!m}}
-function guess(code){const c=nrm(code);if(!c)return null;const sv=(cfg.codes||{})[c];if(sv)return clone(sv);
+const KNOWN={M082:{s:"M",h:["06:30","15:00"]},T034:{s:"T",h:["14:45","23:15"]},"019N":{s:"N",h:["23:00","07:00"]},M021:{s:"M",h:["08:00","16:30"]},M028:{s:"M",h:["09:00","17:30"]},M046:{s:"M",h:["07:00","15:30"]},
+  TRNG:{s:"M",h:["08:00","16:30"]},FF:{s:"M"},PC:{s:"M"},COMP:{s:"F"},OBRI:{s:"F"},"FÉRIAS":{s:"V"},FERIAS:{s:"V"},EST:{s:"F"},"5010":{s:"F"},"5070":{s:"F"},"5270":{s:"F"},"5510":{s:"F"},"5520":{s:"F"},"5569":{s:"F"},"5680":{s:"F"},"5703":{s:"F"}};
+function guess(code){const c=nrm(code);if(!c)return null;const sv=(cfg.codes||{})[c];if(sv)return clone(sv);const kn=KNOWN[String(code).trim().toUpperCase()];if(kn)return clone(kn);
   const t=code.match(/(\d{1,2})[:h]?(\d{2})\s*[-–\/]\s*(\d{1,2})[:h]?(\d{2})/);
   if(t){const h=+t[1];return{s:h>=4&&h<12?"M":h>=12&&h<20?"T":"N",h:[p2(+t[1])+":"+t[2],p2(+t[3])+":"+t[4]]}}
   if(/^(do|rdo|f|fo|fg|off|folga|l|lv|livre|desc|dsc|r|rest|dr|dc|fds)$/.test(c))return{s:"F"};
   if(/^(fer|ferias|v|vac|al|lic|ll)/.test(c))return{s:"V"};
   if(/^m/.test(c))return{s:"M"};if(/^(t|a)/.test(c))return{s:"T"};if(/^n/.test(c))return{s:"N"};return null}
+/* leitura igual à app Vencimentos: Mapa de Serviço (PDF) e Escala Master (Excel) */
+const MESL=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"],M3E=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"],M3P=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+function mesAno(t){const m=String(t||"").toLowerCase().match(/(janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?:\s+(?:de\s+)?(\d{4}))?/);return m?{mes:MESL.indexOf(m[1]==="marco"?"março":m[1]),ano:m[2]?+m[2]:NaN}:{mes:-1,ano:NaN}}
+async function mapaPdf(buf){await loadJs("vendor/pdf.min.js");const lib=window.pdfjsLib;lib.GlobalWorkerOptions.workerSrc="vendor/pdf.worker.min.js";
+  const doc=await lib.getDocument({data:buf}).promise;const pessoas=[];let titulo="";
+  for(let p=1;p<=doc.numPages;p++){const tc=await(await doc.getPage(p)).getTextContent();
+    const items=tc.items.filter(i=>i.str&&i.str.trim()).map(i=>({s:i.str.trim(),x:i.transform[4]+(i.width||0)/2,x0:i.transform[4],y:i.transform[5]}));
+    items.sort((a,b)=>b.y-a.y||a.x0-b.x0);const rows=[];
+    for(const it of items){let r=rows.find(r=>Math.abs(r.y-it.y)<2.5);if(!r){r={y:it.y,items:[]};rows.push(r)}r.items.push(it)}
+    rows.forEach(r=>r.items.sort((a,b)=>a.x0-b.x0));
+    if(!titulo){const t=rows.find(r=>/mapa de servi|escala/i.test(r.items.map(i=>i.s).join(" ")));if(t)titulo=t.items.map(i=>i.s).join(" ")}
+    let cols=null;
+    for(const r of rows){const dias=r.items.filter(i=>/^\d{1,2}-[A-Za-zÀ-ú]{3}/.test(i.s));
+      if(dias.length>=20){cols=dias.map(i=>({dia:parseInt(i.s,10),x:i.x,mes:i.s.split("-")[1].slice(0,3).toLowerCase()}));continue}
+      if(!cols)continue;const id=r.items.find(i=>/^\d{5,7}$/.test(i.s));if(!id)continue;
+      const passo=cols.length>1?(cols[cols.length-1].x-cols[0].x)/(cols.length-1):20;
+      const nome=r.items.filter(i=>i!==id&&i.x0<cols[0].x-passo/2).map(i=>i.s).join(" ");const codigos=cols.map(()=>"");
+      for(const it of r.items){if(it===id||it.x0<cols[0].x-passo/2)continue;let best=0,bd=1e9;cols.forEach((c,ix)=>{const d=Math.abs(c.x-it.x);if(d<bd){bd=d;best=ix}});if(bd<passo*.6)codigos[best]=(codigos[best]?codigos[best]+" ":"")+it.s}
+      pessoas.push({id:id.s,nome,cols,codigos})}}
+  let {mes,ano}=mesAno(titulo);
+  if(mes<0&&pessoas[0]){const ab=pessoas[0].cols[0].mes;mes=Math.max(M3E.indexOf(ab),M3P.indexOf(ab))}
+  if(!ano){const my=titulo.match(/(20\d{2})/);ano=my?+my[1]:new Date().getFullYear()}
+  return pessoas.length&&mes>=0?[{mes,ano,titulo,pessoas}]:[]}
+function masterXlsx(wb){const lista=[];
+  const dataDe=v=>{if(typeof v!=="number"||v<20000||v>80000)return null;const p=XLSX.SSF.parse_date_code(v);return p?{y:p.y,m:p.m-1,d:p.d}:null};
+  for(const nf of wb.SheetNames){const rows=XLSX.utils.sheet_to_json(wb.Sheets[nf],{header:1,raw:true,defval:null});let titulo="";
+    for(const r of rows.slice(0,4))for(const c of r)if(!titulo&&typeof c==="string"&&/mapa de servi|escala/i.test(c))titulo=c.trim();
+    const tm=mesAno(titulo),fm=mesAno(nf);let cols=null,mes=fm.mes,ano=tm.ano||fm.ano;const pessoas=[];
+    for(const r of rows){const datas=r.map(dataDe);
+      if(datas.filter(Boolean).length>=20){const i0=datas.findIndex(x=>x&&x.d===1);if(i0<0)continue;if(mes<0)mes=datas[i0].m;if(!ano)ano=datas[i0].y;
+        cols=[];for(let i=i0,d=1;i<r.length&&datas[i]&&datas[i].d===d&&datas[i].m===datas[i0].m;i++,d++)cols.push({dia:d,ix:i});continue}
+      if(!cols)continue;const antes=r.slice(0,cols[0].ix);const idIx=antes.findIndex(c=>c!==null&&/^\d{5,7}$/.test(String(c).trim()));if(idIx<0)continue;
+      const nome=antes.filter((c,i)=>i!==idIx&&typeof c==="string"&&c.trim()).map(c=>c.trim()).join(" ");
+      pessoas.push({id:String(antes[idIx]).trim(),nome,cols:cols.map(c=>({dia:c.dia})),codigos:cols.map(c=>r[c.ix]==null?"":String(r[c.ix]).trim())})}
+    if(mes<0)mes=tm.mes;if(pessoas.length&&mes>=0)lista.push({mes,ano:ano||new Date().getFullYear(),titulo:titulo||nf,pessoas})}
+  return lista}
+let pl=null;
+function stepP(){const L=pl.lista,dd=L[pl.li],pi=pl.pi;
+  mbox.innerHTML=`<h3 id="mt">Escala de ${MESL[dd.mes]} ${dd.ano}</h3><p>${esc(dd.titulo||"")}</p>
+  ${L.length>1?`<div class="fld"><label for="pmes">Mês</label><select id="pmes" class="sel">${L.map((q,ix)=>`<option value="${ix}"${ix===pl.li?" selected":""}>${MESL[q.mes]} ${q.ano}</option>`).join("")}</select></div>`:""}
+  <div class="fld"><label for="pwho">A sua linha na escala</label><select id="pwho" class="sel"><option value="-1"${pi<0?" selected":""} disabled>Escolha o seu número e nome…</option>${dd.pessoas.map((q,ix)=>`<option value="${ix}"${ix===pi?" selected":""}>${esc(q.id)} ${esc(q.nome)}</option>`).join("")}</select></div>
+  <p style="margin-top:-6px">${pl.auto?"Escolhida pelo seu número de empregado, guardado da última vez.":"A app guarda o seu número e, nos meses seguintes, escolhe a sua linha sozinha."}</p>
+  <p class="err" id="perr"></p>
+  <div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mback">Outro ficheiro</button><button class="btn" id="pcont">Continuar</button></div>`}
+mbox.addEventListener("change",e=>{if(!pl)return;
+  if(e.target.id==="pmes"){pl.li=+e.target.value;const d2=pl.lista[pl.li];pl.pi=cfg.escalaId?d2.pessoas.findIndex(q=>q.id===cfg.escalaId):-1;pl.auto=pl.pi>=0;stepP()}
+  if(e.target.id==="pwho"){pl.pi=+e.target.value;pl.auto=false}});
+mbox.addEventListener("click",e=>{if(e.target.id!=="pcont"||!pl)return;const dd=pl.lista[pl.li],p=dd.pessoas[pl.pi];if(!p){$("#perr").textContent="Escolha a sua linha.";return}
+  if(cfg.escalaId!==p.id){cfg.escalaId=p.id;saveCfg()}
+  const cells=p.cols.map((c,ix)=>({d:c.dia,m:dd.mes+1,y:dd.ano,code:(p.codigos[ix]||"").trim()}));
+  imp={person:p.id+" "+p.nome,cells,needM:false,mon:{y:dd.ano,m:dd.mes+1},map:{}};pl=null;
+  [...new Set(cells.map(c=>c.code).filter(Boolean))].forEach(c=>imp.map[c]=guess(c)||{s:""});
+  if(Object.values(imp.map).every(m=>m.s))buildImp(true);else step2()});
 let imp=null;
-mbox.addEventListener("click",e=>{if(e.target.id==="mx")closeM();if(e.target.id==="mback")step1();if(e.target.id==="mok")applyImp();
+mbox.addEventListener("click",e=>{if(e.target.id==="mx")closeM();if(e.target.id==="mback"){pl=null;step1()}if(e.target.id==="mok")applyImp();
   const mb=e.target.closest("[data-ms]");if(mb&&imp){const c=mb.closest("[data-code]").dataset.code,k=mb.dataset.ms;const cur=imp.map[c]||{};cur.s=k;if(SK[k]?.h&&!cur.h)cur.h=SK[k].h.slice();if(!SK[k]?.h)delete cur.h;imp.map[c]=cur;keepMon();step2()}
   if(e.target.id==="mcont")buildImp()});
 mbox.addEventListener("input",e=>{const t=e.target;if(t.dataset.hs!=null||t.dataset.he!=null){const c=t.closest("[data-code]").dataset.code;const m=imp.map[c];m.h=m.h||["",""];m.h[t.dataset.hs!=null?0:1]=t.value}});
@@ -470,9 +526,12 @@ mbox.addEventListener("dragover",e=>{const d=e.target.closest(".drop");if(d){e.p
 mbox.addEventListener("drop",e=>{const d=e.target.closest(".drop");if(d&&e.dataTransfer.files[0]){e.preventDefault();handle(e.dataTransfer.files[0])}});
 mbox.addEventListener("change",e=>{if(e.target.id==="pf"&&e.target.files[0])handle(e.target.files[0])});
 async function handle(f){const name=($("#pname")?.value||"").trim();if(name!==(cfg.name||"")){cfg.name=name;saveCfg()}
-  if(!name){step1("Escreva o seu nome ou número como aparece na escala.");return}
   mbox.innerHTML=`<h3 id="mt">A ler a escala…</h3><p>${esc(f.name)}</p><div class="spin"></div>`;
   try{const buf=await f.arrayBuffer();const ext=f.name.split(".").pop().toLowerCase();let res=null,txt="";
+    let lista=[];try{if(ext==="pdf")lista=await mapaPdf(buf.slice(0));else{await loadJs("vendor/xlsx.full.min.js");lista=masterXlsx(XLSX.read(buf,{type:"array"}))}}catch(_){}
+    if(lista.length){const now=new Date();let li=lista.findIndex(q=>q.ano===now.getFullYear()&&q.mes===now.getMonth());if(li<0)li=lista.length-1;
+      const pi=cfg.escalaId?lista[li].pessoas.findIndex(q=>q.id===cfg.escalaId):-1;pl={lista,li,pi,auto:pi>=0};stepP();return}
+    if(!name){step1("Não reconheci o formato do Mapa de Serviço / Escala Master. Escreva o seu nome como aparece na escala e tente outra vez.");return}
     try{if(ext==="pdf"){const pages=await readPdf(buf);res=parsePdf(pages,name);txt=pages.flat().map(r=>r.it.map(t=>t.s).join(" ")).join(" ")}
       else{const sh=await readXls(buf);for(const rows of sh){const r=parseGrid(rows,name);const r2=(!r||!r.cells.length)?parseGrid(transpose(rows),name):null;const b=(r2&&r2.cells.length)?r2:r;if(b&&(!res||b.cells.length>res.cells.length))res=b}txt=sh.flat(2).slice(0,3000).join(" ")}}
     catch(err){throw new Error("Não consegui abrir o ficheiro. Confirme que é um Excel ou PDF válido (um PDF digitalizado como imagem não pode ser lido).")}
@@ -491,14 +550,14 @@ function step2(){const codes=Object.keys(imp.map),cnt={};imp.cells.forEach(c=>{i
     ${m.h?`<div class="hrs">Horário <input type="time" data-hs value="${esc(m.h[0])}" aria-label="Início"> até <input type="time" data-he value="${esc(m.h[1])}" aria-label="Fim"></div>`:""}</div>`}).join(""):`<p class="err">Não encontrei códigos de turno na sua linha.</p>`}</div>
   <p class="err" id="merr"></p>
   <div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mback">Outro ficheiro</button><button class="btn" id="mcont">Continuar</button></div>`}
-function buildImp(){keepMon();const miss=Object.keys(imp.map).filter(c=>!imp.map[c].s);
+function buildImp(direct){if(!direct)keepMon();const miss=Object.keys(imp.map).filter(c=>!imp.map[c].s);
   if(miss.length){$("#merr").textContent="Escolha o tipo para: "+miss.join(", ");return}
   cfg.codes=cfg.codes||{};Object.entries(imp.map).forEach(([c,m])=>cfg.codes[nrm(c)]=clone(m));saveCfg();
   let y=imp.mon.y,m=imp.mon.m,prev=0;const out=[];
   imp.cells.forEach(c=>{let cy=c.y,cm=c.m;if(!cm){if(prev&&c.d<prev-20){m++;if(m>12){m=1;y++}}cm=m;cy=y}else{if(!cy)cy=y;y=cy;m=cm}prev=c.d;
     const dt=new Date(cy,cm-1,c.d);if(dt.getDate()!==c.d)return;const mp=imp.map[c.code];if(!c.code||!mp||mp.s==="X")return;
     out.push({date:key(dt),code:c.code,shift:mp.s,start:mp.h?.[0]||"",end:mp.h?.[1]||""})});
-  if(!out.length){$("#merr").textContent="Nenhum dia com turno para importar.";return}
+  if(!out.length){if($("#merr"))$("#merr").textContent="Nenhum dia com turno para importar.";else step1("Nenhum dia com turno para importar nessa linha.");return}
   parsed={days:out.sort((a,b)=>a.date.localeCompare(b.date)),person:imp.person,notes:""};step3()}
 function step3(){const ds=parsed.days,ov=ds.filter(d=>days[d.date]?.shift&&days[d.date].shift!==d.shift).length;
   const cnt={};ds.forEach(d=>cnt[d.shift]=(cnt[d.shift]||0)+1);
