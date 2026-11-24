@@ -273,7 +273,7 @@ const clone=o=>JSON.parse(JSON.stringify(o));
 let todayK=key(new Date());
 let cfg={extra:{}},days={},sel=todayK,tab="rep",paint=null,open={ini:1,rot:1,fim:1};
 const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
-let winStart=addD(fromKey(todayK),-1);const WN=35;
+const BACK=21;let winStart=addD(fromKey(todayK),-BACK);const WN=63;
 let live=false;
 const API_DEF="https://occ-api.ricardo-j-silva11.workers.dev";
 let API=localStorage.getItem("occ-api")||API_DEF,KEY=localStorage.getItem("occ-key")||"";
@@ -318,16 +318,17 @@ const SIC={M:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.
   F:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   V:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>'};
 const sic=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SIC[k]||""}</svg>`;
+function toSel(){const st=$("#days"),se=st.querySelector(".sel");if(!se)return;const pv=se.previousElementSibling||se;st.scrollLeft=pv.offsetLeft-st.offsetLeft-4}
 function renderCal(){
   const WK=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"],end=addD(winStart,WN-1),fmt=d=>d.toLocaleDateString("pt-PT",{day:"numeric",month:"short"}).replace(".","");
-  $("#mon").textContent=`${fmt(winStart)} – ${fmt(end)} ${end.getFullYear()}`;
+  {const a=fromKey(sel);$("#mon").textContent=a.toLocaleDateString("pt-PT",{month:"long",year:"numeric"}).replace(/^./,c=>c.toUpperCase())}
   let h="";for(let i=0;i<WN;i++){const d=addD(winStart,i),k=key(d),D=days[k],s=D&&SK[D.shift],past=k<todayK;
     const mlab=(i===0||d.getDate()===1)?`<span class="mo">${d.toLocaleDateString("pt-PT",{month:"short"}).replace(".","")}</span>`:"";
     h+=`<button class="day${d.getDay()%6===0?" we":""}${k===todayK?" today":""}${k===sel?" sel":""}${past?" past":""}" data-k="${k}" aria-label="${d.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"})}${s?", "+s.n+(D.code?" "+esc(D.code):""):""}">
       <span class="wk">${k===todayK?"Hoje":WK[d.getDay()]}${mlab}</span><span class="n">${d.getDate()}</span>
       ${s?`<span class="sh" style="--c:var(--${s.k})">${sic(s.k)}<b>${esc((D.code||s.n).slice(0,6))}</b></span>`:`<span class="sh none">—</span>`}${hasRep(D)?`<i class="dot" title="Com RDO"></i>`:""}</button>`}
   $("#days").innerHTML=h;
-  {const st=$("#days"),se=st.querySelector(".sel");if(se&&(se.offsetLeft-st.offsetLeft<st.scrollLeft||se.offsetLeft-st.offsetLeft+se.offsetWidth>st.scrollLeft+st.clientWidth))st.scrollLeft=se.offsetLeft-st.offsetLeft-12}
+  {const st=$("#days"),se=st.querySelector(".sel");if(se&&(se.offsetLeft-st.offsetLeft<st.scrollLeft||se.offsetLeft-st.offsetLeft+se.offsetWidth>st.scrollLeft+st.clientWidth))toSel()}
   $("#legend").innerHTML=`<span style="font-size:13px;color:var(--mute);margin-inline-end:2px">Preencher escala:</span>`+ST.map(s=>`<button class="lg${paint===s.k?" on":""}" data-p="${s.k}" style="--c:var(--${s.k})"><span class="chip" style="--c:var(--${s.k})">${s.k}</span>${s.n}</button>`).join("")+`<button class="lg${paint==="-"?" on":""}" data-p="-" style="--c:var(--mute)">Apagar</button>`;
   const pt=$("#paint");pt.classList.toggle("on",!!paint);
   pt.innerHTML=paint?`Toque nos dias para marcar <b>${paint==="-"?"sem turno":esc(SK[paint].n)}</b>. <button class="pill" id="pdone" style="height:34px;margin-inline-start:6px">Terminar</button>`:"";
@@ -366,10 +367,10 @@ function chkPane(d){
 function render(){renderCal();renderDay()}
 const _rd=renderDay;renderDay=function(){_rd();document.querySelectorAll("[data-rep]").forEach(fit)};
 /* events */
-$("#goto").addEventListener("change",e=>{const v=e.target.value;if(!v)return;sel=v;chk=null;winStart=addD(fromKey(v),-1);render();$("#days").scrollLeft=0;e.target.value=""});
-$("#prev").onclick=()=>{winStart=addD(winStart,-7);renderCal()};
-$("#next").onclick=()=>{winStart=addD(winStart,7);renderCal()};
-$("#today").onclick=()=>{winStart=addD(fromKey(todayK),-1);sel=todayK;render();$("#days").scrollLeft=0};
+$("#goto").addEventListener("change",e=>{const v=e.target.value;if(!v)return;sel=v;chk=null;winStart=addD(fromKey(v),-BACK);render();toSel();e.target.value=""});
+$("#prev").onclick=()=>{sel=key(addD(fromKey(sel),-7));chk=null;if(sel<key(addD(winStart,3)))winStart=addD(fromKey(sel),-BACK);render();toSel()};
+$("#next").onclick=()=>{sel=key(addD(fromKey(sel),7));chk=null;if(sel>key(addD(winStart,WN-8)))winStart=addD(fromKey(sel),-BACK);render();toSel()};
+$("#today").onclick=()=>{winStart=addD(fromKey(todayK),-BACK);sel=todayK;render();toSel()};
 $("#days").addEventListener("click",e=>{const b=e.target.closest(".day");if(!b)return;const k=b.dataset.k;
   if(paint){edit(k,d=>{const s=paint==="-"?"":paint;d.shift=s;d.code="";const h=hoursOf(s);d.start=h?h[0]:"";d.end=h?h[1]:""});if(k===sel)renderDay();renderCal();return}
   sel=k;chk=null;render();
@@ -605,7 +606,7 @@ function step3(){const ds=parsed.days,ov=ds.filter(d=>days[d.date]?.shift&&days[
 function applyImp(){if(!parsed)return;const rep=$("#mrep")?$("#mrep").checked:true;let n=0;
   parsed.days.forEach(x=>{const cur=days[x.date];if(cur?.shift&&cur.shift!==x.shift&&!rep)return;
     edit(x.date,d=>{d.shift=x.shift;d.code=String(x.code||"").slice(0,6);const h=hoursOf(x.shift);d.start=x.start||(h?h[0]:"");d.end=x.end||(h?h[1]:"");if(!h){d.start="";d.end=""}});n++});
-  {const a=parsed.days[0].date,b=parsed.days[parsed.days.length-1].date;if(!(a<=todayK&&todayK<=b))winStart=fromKey(a)}closeM();render();toast(n+" dias importados")}
+  {const a=parsed.days[0].date,b=parsed.days[parsed.days.length-1].date;if(!(a<=todayK&&todayK<=b)){winStart=addD(fromKey(a),-BACK);sel=a}}closeM();render();toast(n+" dias importados")}
 const tick=()=>{$("#clk").innerHTML=new Date().toISOString().slice(11,16)+"<small>UTC</small>"};tick();setInterval(tick,10000);
 /* settings & login */
 function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}):"—";
@@ -638,7 +639,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="10";
+const APPV="11";
 function fixHours(){const def={M:["06:30","15:00"],T:["14:45","23:15"],N:["23:00","07:00"]},old=[["07:00","15:00"],["15:00","23:00"]];
   Object.keys(days).forEach(dk=>{const d=days[dk];if(!def[d.shift]||(d.code&&KNOWN[String(d.code).toUpperCase()]))return;const mine=hoursOf(d.shift);
     const wrong=ST.some(x=>x.h&&x.k!==d.shift&&(()=>{const h=hoursOf(x.k);return d.start===h[0]&&d.end===h[1]})())||old.some(h=>d.start===h[0]&&d.end===h[1]&&!(mine[0]===h[0]&&mine[1]===h[1]));
@@ -648,7 +649,7 @@ function migrateHours(){fixHours();if(cfg.hmig)return;let n=0;Object.keys(days).
     else if(d.shift==="T"&&d.start==="15:00"&&d.end==="23:00"){edit(dk,x=>{x.start="14:45";x.end="23:15"});n++}});cfg.hmig=1;saveCfg()}
 function startWith(k){KEY=k;try{localStorage.setItem("occ-key",k)}catch(_){}LK="occ-"+fnv(k);loadLocal();migrateHours();lg.classList.remove("on");render();setSync(false,"A ligar…");sync()}
 if(KEY)startWith(KEY);else{render();showLogin()}
-function rollDay(){const nk=key(new Date());if(nk===todayK)return;const old=todayK;todayK=nk;if(sel===old)sel=nk;winStart=addD(fromKey(nk),-1);render();$("#days").scrollLeft=0}
+function rollDay(){const nk=key(new Date());if(nk===todayK)return;const old=todayK;todayK=nk;if(sel===old)sel=nk;winStart=addD(fromKey(nk),-BACK);render();toSel()}
 setInterval(rollDay,60000);
 setInterval(()=>{if(document.visibilityState==="visible")sync()},30000);
 addEventListener("online",sync);addEventListener("offline",()=>setSync(false,"Offline · guardado no dispositivo"));
