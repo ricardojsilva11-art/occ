@@ -47,17 +47,24 @@ button{cursor:pointer;border:0;background:none}
 .ib{width:44px;height:44px;border-radius:12px;background:var(--card2);font-size:20px;display:grid;place-items:center}
 .pill{height:44px;padding:0 14px;border-radius:12px;background:var(--card2);font-weight:600;font-size:15px}
 .wd{display:none}
-.days{display:flex;gap:3px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:thin}
-.day .chip{width:100%;min-width:0;height:22px;padding:0 1px;font:600 10px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:-.03em;border-radius:6px;overflow:hidden;white-space:nowrap}
-.day .n{font-size:15px;line-height:1.3}
-.day .wk{font-size:10px;font-weight:600;color:var(--mute);text-transform:uppercase}
+.days{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.day .n{font-size:30px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.day .mo{margin-inline-start:4px;text-transform:capitalize;color:var(--acc)}
+.day .sh{width:100%;height:58px;border-radius:12px;background:var(--c);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:0 4px 10px color-mix(in srgb,var(--c) 30%,transparent)}
+.day .sh b{font:600 12px/1 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.02em}
+.day .sh.none{background:transparent;border:2px dashed var(--line);color:var(--mute);box-shadow:none;font-size:18px}
+.day.past{opacity:.5}
+.day.today{border-color:var(--ink)}
+.day.today .wk{color:var(--ink);font-weight:700}
+.day.sel{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 25%,transparent)}
+.day .wk{font-size:12px;font-weight:600;color:var(--mute);text-transform:uppercase}
 .day.we{background:color-mix(in srgb,var(--acc) 7%,var(--card2))}
 .day.we .wk{color:var(--acc)}
 .wd span{font-size:12px;font-weight:600;color:var(--mute);text-align:center;padding:4px 0}
-.day{position:relative;flex:1 0 32px;min-height:84px;padding:6px 3px 5px!important;scroll-snap-align:center;gap:4px;border-radius:12px;background:var(--card2);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 2px;font-weight:600;font-size:15px;border:2px solid transparent;transition:transform .12s}
+.day{position:relative;flex:0 0 96px;min-height:142px;padding:10px 8px!important;scroll-snap-align:center;gap:4px;border-radius:12px;background:var(--card2);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:6px 2px;font-weight:600;font-size:15px;border:2px solid transparent;transition:transform .12s}
 .day:hover{transform:translateY(-1px)}
 .day.out{opacity:.35}
-.day.today .n{background:var(--ink);color:var(--card);border-radius:8px;padding:0 6px}
+.day.today .n{color:var(--acc)}
 .day.sel{border-color:var(--acc)}
 .chip{min-width:28px;height:22px;padding:0 6px;border-radius:7px;font:600 12px "IBM Plex Mono";display:grid;place-items:center;color:#fff;background:var(--c)}
 .chip.empty{background:transparent}
@@ -190,7 +197,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .mp.need{border-color:#f59e0b;background:color-mix(in srgb,#f59e0b 7%,var(--card))}
 .mph{display:flex;align-items:center;gap:8px;margin-bottom:8px}.mph small{color:var(--mute)}
 .mp .sb{height:38px;min-width:0;font-size:13px}
-@media(max-width:600px){.day{flex:0 0 44px}.top h1 small{display:none}.sync{font-size:11px}}
+@media(max-width:600px){.day{flex:0 0 82px;min-height:132px}.day .n{font-size:26px}.top h1 small{display:none}.sync{font-size:11px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -204,10 +211,10 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 <div class="wrap">
   <section class="card cal">
     <div class="ch">
-      <button class="ib" id="prev" aria-label="Mês anterior">‹</button>
+      <button class="ib" id="prev" aria-label="Semana anterior">‹</button>
       <h2 id="mon">—</h2>
       <button class="pill" id="today">Hoje</button>
-      <button class="ib" id="next" aria-label="Mês seguinte">›</button>
+      <button class="ib" id="next" aria-label="Semana seguinte">›</button>
     </div>
     <button class="imp" id="impBtn">⇪ Importar escala (PDF ou Excel)</button>
     <div class="wd"><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span></div>
@@ -261,9 +268,10 @@ const p2=n=>String(n).padStart(2,"0");
 const key=d=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
 const fromKey=k=>{const [y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d)};
 const clone=o=>JSON.parse(JSON.stringify(o));
-const todayK=key(new Date());
-let cfg={extra:{}},days={},sel=todayK,month=new Date(),tab="rep",paint=null,open={ini:1,rot:1,fim:1};
-month.setDate(1);
+let todayK=key(new Date());
+let cfg={extra:{}},days={},sel=todayK,tab="rep",paint=null,open={ini:1,rot:1,fim:1};
+const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+let winStart=addD(fromKey(todayK),-1);const WN=35;
 let live=false;
 const API_DEF="https://occ-api.ricardo-j-silva11.workers.dev";
 let API=localStorage.getItem("occ-api")||API_DEF,KEY=localStorage.getItem("occ-key")||"";
@@ -302,22 +310,29 @@ const hasRep=d=>d&&Object.values(d.rep||{}).some(v=>v&&String(v).trim());
 const items=t=>{const h=(cfg.hideIt||{})[t.id]||[];return t.i.map((x,n)=>({id:"b"+n,t:x})).filter(i=>!h.includes(i.id)).concat((cfg.extra?.[t.id]||[]).map(x=>({id:x.id,t:x.t,x:1})))};
 const doneOf=(d,t)=>{const c=(d.checks||{})[t.id]||[];return items(t).filter(i=>c.includes(i.id)).length};
 /* calendar */
+const SIC={M:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  T:'<path d="M17 18a5 5 0 0 0-10 0"/><path d="M12 9V3M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 6l-4 3-4-3"/>',
+  N:'<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+  F:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  V:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>'};
+const sic=k=>`<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SIC[k]||""}</svg>`;
 function renderCal(){
-  const y=month.getFullYear(),m=month.getMonth();
-  {const t=month.toLocaleDateString("pt-PT",{month:"long"});$("#mon").textContent=t.charAt(0).toUpperCase()+t.slice(1)+" "+y}
-  const nd=new Date(y,m+1,0).getDate(),WK=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-  let h="";for(let i=1;i<=nd;i++){const d=new Date(y,m,i);
-    const k=key(d),D=days[k],s=D&&SK[D.shift];
-    h+=`<button class="day${d.getDay()%6===0?" we":""}${k===todayK?" today":""}${k===sel?" sel":""}" data-k="${k}" aria-label="${d.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"})}${s?", "+s.n:""}">
-      <span class="wk">${WK[d.getDay()]}</span><span class="n">${d.getDate()}</span>${s?`<span class="chip" style="--c:var(--${s.k})">${esc((D.code||s.k).slice(0,4))}</span>`:`<span class="chip empty"></span>`}${hasRep(D)?`<i class="dot" title="Com RDO"></i>`:""}</button>`}
+  const WK=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"],end=addD(winStart,WN-1),fmt=d=>d.toLocaleDateString("pt-PT",{day:"numeric",month:"short"}).replace(".","");
+  $("#mon").textContent=`${fmt(winStart)} – ${fmt(end)} ${end.getFullYear()}`;
+  let h="";for(let i=0;i<WN;i++){const d=addD(winStart,i),k=key(d),D=days[k],s=D&&SK[D.shift],past=k<todayK;
+    const mlab=(i===0||d.getDate()===1)?`<span class="mo">${d.toLocaleDateString("pt-PT",{month:"short"}).replace(".","")}</span>`:"";
+    h+=`<button class="day${d.getDay()%6===0?" we":""}${k===todayK?" today":""}${k===sel?" sel":""}${past?" past":""}" data-k="${k}" aria-label="${d.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"})}${s?", "+s.n+(D.code?" "+esc(D.code):""):""}">
+      <span class="wk">${k===todayK?"Hoje":WK[d.getDay()]}${mlab}</span><span class="n">${d.getDate()}</span>
+      ${s?`<span class="sh" style="--c:var(--${s.k})">${sic(s.k)}<b>${esc((D.code||s.n).slice(0,6))}</b></span>`:`<span class="sh none">—</span>`}${hasRep(D)?`<i class="dot" title="Com RDO"></i>`:""}</button>`}
   $("#days").innerHTML=h;
-  {const st=$("#days"),se=st.querySelector(".sel")||st.querySelector(".today");if(se)st.scrollLeft=se.offsetLeft-st.clientWidth/2+se.clientWidth/2-st.offsetLeft}
+  {const st=$("#days"),se=st.querySelector(".sel");if(se&&(se.offsetLeft-st.offsetLeft<st.scrollLeft||se.offsetLeft-st.offsetLeft+se.offsetWidth>st.scrollLeft+st.clientWidth))st.scrollLeft=se.offsetLeft-st.offsetLeft-12}
   $("#legend").innerHTML=`<span style="font-size:13px;color:var(--mute);margin-inline-end:2px">Preencher escala:</span>`+ST.map(s=>`<button class="lg${paint===s.k?" on":""}" data-p="${s.k}" style="--c:var(--${s.k})"><span class="chip" style="--c:var(--${s.k})">${s.k}</span>${s.n}</button>`).join("")+`<button class="lg${paint==="-"?" on":""}" data-p="-" style="--c:var(--mute)">Apagar</button>`;
   const pt=$("#paint");pt.classList.toggle("on",!!paint);
   pt.innerHTML=paint?`Toque nos dias para marcar <b>${paint==="-"?"sem turno":esc(SK[paint].n)}</b>. <button class="pill" id="pdone" style="height:34px;margin-inline-start:6px">Terminar</button>`:"";
+  const sd=fromKey(sel),y=sd.getFullYear(),m=sd.getMonth();
   const cnt={};let rep=0;Object.values(days).forEach(D=>{const d=fromKey(D.date);if(d.getFullYear()===y&&d.getMonth()===m){if(D.shift)cnt[D.shift]=(cnt[D.shift]||0)+1;if(hasRep(D))rep++}});
-  const work=(cnt.M||0)+(cnt.T||0)+(cnt.N||0);
-  $("#stats").innerHTML=`<span>Turnos <b>${work}</b></span>`+ST.map(s=>`<span>${s.n} <b>${cnt[s.k]||0}</b></span>`).join("")+`<span>RDO <b>${rep}</b></span>`}
+  const work=(cnt.M||0)+(cnt.T||0)+(cnt.N||0),mn=sd.toLocaleDateString("pt-PT",{month:"long"});
+  $("#stats").innerHTML=`<span><b>${mn.charAt(0).toUpperCase()+mn.slice(1)}</b></span><span>Turnos <b>${work}</b></span>`+ST.map(s=>`<span>${s.n} <b>${cnt[s.k]||0}</b></span>`).join("")+`<span>RDO <b>${rep}</b></span>`}
 /* day panel */
 function renderDay(){
   const d=getDay(sel),dt=fromKey(sel),s=SK[d.shift];
@@ -349,12 +364,12 @@ function chkPane(d){
 function render(){renderCal();renderDay()}
 const _rd=renderDay;renderDay=function(){_rd();document.querySelectorAll("[data-rep]").forEach(fit)};
 /* events */
-$("#prev").onclick=()=>{month.setMonth(month.getMonth()-1);renderCal()};
-$("#next").onclick=()=>{month.setMonth(month.getMonth()+1);renderCal()};
-$("#today").onclick=()=>{month=new Date();month.setDate(1);sel=todayK;render()};
+$("#prev").onclick=()=>{winStart=addD(winStart,-7);renderCal()};
+$("#next").onclick=()=>{winStart=addD(winStart,7);renderCal()};
+$("#today").onclick=()=>{winStart=addD(fromKey(todayK),-1);sel=todayK;render();$("#days").scrollLeft=0};
 $("#days").addEventListener("click",e=>{const b=e.target.closest(".day");if(!b)return;const k=b.dataset.k;
   if(paint){edit(k,d=>{const s=paint==="-"?"":paint;d.shift=s;d.code="";const h=SK[s]?.h;d.start=h?h[0]:"";d.end=h?h[1]:""});if(k===sel)renderDay();renderCal();return}
-  sel=k;chk=null;const d=fromKey(k);if(d.getMonth()!==month.getMonth()){month=new Date(d.getFullYear(),d.getMonth(),1)}render();
+  sel=k;chk=null;render();
   if(innerWidth<920)$("#dp").scrollIntoView({behavior:"smooth",block:"start"})});
 $("#legend").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b)return;paint=paint===b.dataset.p?null:b.dataset.p;renderCal()});
 $("#paint").addEventListener("click",e=>{if(e.target.id==="pdone"){paint=null;renderCal()}});
@@ -587,7 +602,7 @@ function step3(){const ds=parsed.days,ov=ds.filter(d=>days[d.date]?.shift&&days[
 function applyImp(){if(!parsed)return;const rep=$("#mrep")?$("#mrep").checked:true;let n=0;
   parsed.days.forEach(x=>{const cur=days[x.date];if(cur?.shift&&cur.shift!==x.shift&&!rep)return;
     edit(x.date,d=>{d.shift=x.shift;d.code=String(x.code||"").slice(0,6);const h=SK[x.shift].h;d.start=x.start||(h?h[0]:"");d.end=x.end||(h?h[1]:"");if(!h){d.start="";d.end=""}});n++});
-  const f=fromKey(parsed.days[0].date);month=new Date(f.getFullYear(),f.getMonth(),1);closeM();render();toast(n+" dias importados")}
+  {const a=parsed.days[0].date,b=parsed.days[parsed.days.length-1].date;if(!(a<=todayK&&todayK<=b))winStart=fromKey(a)}closeM();render();toast(n+" dias importados")}
 const tick=()=>{$("#clk").innerHTML=new Date().toISOString().slice(11,16)+"<small>UTC</small>"};tick();setInterval(tick,10000);
 /* settings & login */
 function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}):"—";
@@ -618,9 +633,11 @@ $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
 function startWith(k){KEY=k;try{localStorage.setItem("occ-key",k)}catch(_){}LK="occ-"+fnv(k);loadLocal();lg.classList.remove("on");render();setSync(false,"A ligar…");sync()}
 if(KEY)startWith(KEY);else{render();showLogin()}
+function rollDay(){const nk=key(new Date());if(nk===todayK)return;const old=todayK;todayK=nk;if(sel===old)sel=nk;winStart=addD(fromKey(nk),-1);render();$("#days").scrollLeft=0}
+setInterval(rollDay,60000);
 setInterval(()=>{if(document.visibilityState==="visible")sync()},30000);
 addEventListener("online",sync);addEventListener("offline",()=>setSync(false,"Offline · guardado no dispositivo"));
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")sync()});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){rollDay();sync()}});
 if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
 }
 </script>
