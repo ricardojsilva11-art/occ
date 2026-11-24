@@ -616,7 +616,7 @@ function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-
   <p style="margin:6px 0 0">Usado quando marca um turno. Ao mudar, os dias de hoje em diante com o horário antigo também mudam.</p></div>
   <div class="fld"><label for="cy">Apagar turnos importados de um ano</label><div style="display:flex;gap:8px"><select id="cy" class="sel">${[-1,0,1,2].map(k=>`<option${k===0?" selected":""}>${new Date().getFullYear()+k}</option>`).join("")}</select><button class="btn sec" id="cyb" style="flex:none;color:#dc2626">Apagar turnos</button></div><p style="margin:6px 0 0">Só apaga os turnos da escala; o RDO e as checklists ficam.</p></div>
   <details class="fld"><summary style="cursor:pointer;font-weight:600">Avançado</summary><label for="sapi" style="margin-top:8px">Servidor</label><input id="sapi" value="${esc(API)}"></details>
-  <div class="bar" style="justify-content:space-between"><button class="btn sec" id="sout" style="color:#dc2626">Sair deste dispositivo</button><button class="btn" id="mx">Fechar</button></div>`;mod.classList.add("on")}
+  <p style="font-size:12px;color:var(--mute);margin:0 0 10px">Versão ${APPV}</p><div class="bar" style="justify-content:space-between"><button class="btn sec" id="sout" style="color:#dc2626">Sair deste dispositivo</button><button class="btn" id="mx">Fechar</button></div>`;mod.classList.add("on")}
 $("#setBtn").onclick=settings;
 mbox.addEventListener("click",async e=>{const id=e.target.id;
   if(id==="sshow"){const k=$("#skey");k.type=k.type==="password"?"text":"password"}
@@ -636,7 +636,12 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-function migrateHours(){if(cfg.hmig)return;let n=0;Object.keys(days).forEach(dk=>{const d=days[dk];
+const APPV="9";
+function fixHours(){const def={M:["06:30","15:00"],T:["14:45","23:15"],N:["23:00","07:00"]},old=[["07:00","15:00"],["15:00","23:00"]];
+  Object.keys(days).forEach(dk=>{const d=days[dk];if(!def[d.shift]||(d.code&&KNOWN[String(d.code).toUpperCase()]))return;const mine=hoursOf(d.shift);
+    const wrong=ST.some(x=>x.h&&x.k!==d.shift&&(()=>{const h=hoursOf(x.k);return d.start===h[0]&&d.end===h[1]})())||old.some(h=>d.start===h[0]&&d.end===h[1]&&!(mine[0]===h[0]&&mine[1]===h[1]));
+    if(wrong)edit(dk,x=>{x.start=mine[0];x.end=mine[1]})})}
+function migrateHours(){fixHours();if(cfg.hmig)return;let n=0;Object.keys(days).forEach(dk=>{const d=days[dk];
     if(d.shift==="M"&&d.start==="07:00"&&d.end==="15:00"&&!/^M046$/i.test(d.code||"")){edit(dk,x=>{x.start="06:30";x.end="15:00"});n++}
     else if(d.shift==="T"&&d.start==="15:00"&&d.end==="23:00"){edit(dk,x=>{x.start="14:45";x.end="23:15"});n++}});cfg.hmig=1;saveCfg()}
 function startWith(k){KEY=k;try{localStorage.setItem("occ-key",k)}catch(_){}LK="occ-"+fnv(k);loadLocal();migrateHours();lg.classList.remove("on");render();setSync(false,"A ligar…");sync()}
@@ -646,7 +651,9 @@ setInterval(rollDay,60000);
 setInterval(()=>{if(document.visibilityState==="visible")sync()},30000);
 addEventListener("online",sync);addEventListener("offline",()=>setSync(false,"Offline · guardado no dispositivo"));
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){rollDay();sync()}});
-if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+if("serviceWorker" in navigator&&location.protocol==="https:"){let had=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&!dirty.size)location.reload();had=true});
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{r.update();setInterval(()=>r.update(),3600000)}).catch(()=>{})}
 }
 </script>
 </body>

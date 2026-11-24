@@ -1,5 +1,5 @@
 // OCC Diário — funciona sem rede
-const V = "occ-v8";
+const V = "occ-v9";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest",
   "icon-180.png", "icon-192.png", "icon-512.png",
@@ -7,7 +7,7 @@ const SHELL = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (e) => {
@@ -27,7 +27,7 @@ self.addEventListener("fetch", (e) => {
   // Página: rede primeiro (para receber atualizações), cache se offline
   if (req.mode === "navigate") {
     e.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-store" })
         .then((r) => { const c = r.clone(); caches.open(V).then((x) => x.put("index.html", c)); return r; })
         .catch(() => caches.match("index.html"))
     );
