@@ -87,7 +87,7 @@ button{cursor:pointer;border:0;background:none}
 .sb i{width:10px;height:10px;border-radius:3px;background:var(--c)}
 .sb.on{background:var(--c);color:#fff}.sb.on i{background:#fff}
 .hrs{display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--mute)}
-.hrs input{width:118px}
+.hrs input{width:150px}
 input,textarea{font-size:16px;border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:10px 12px;width:100%;min-height:44px}
 textarea{resize:vertical;min-height:72px;line-height:1.45}
 .tabs{display:flex;gap:4px;padding:10px 12px 0;border-bottom:1px solid var(--line)}
@@ -237,8 +237,9 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 <div class="mod" id="mod" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="mbox" id="mbox"></div></div>
 <script>
 {
-const ST=[{k:"M",n:"Manhã",h:["07:00","15:00"]},{k:"T",n:"Tarde",h:["15:00","23:00"]},{k:"N",n:"Noite",h:["23:00","07:00"]},{k:"F",n:"Folga"},{k:"V",n:"Férias"}];
+const ST=[{k:"M",n:"Manhã",h:["06:30","15:00"]},{k:"T",n:"Tarde",h:["14:45","23:15"]},{k:"N",n:"Noite",h:["23:00","07:00"]},{k:"F",n:"Folga"},{k:"V",n:"Férias"}];
 const SK=Object.fromEntries(ST.map(s=>[s.k,s]));
+const hoursOf=k=>SK[k]?.h?((cfg.hours&&cfg.hours[k])||SK[k].h).slice():null;
 const RDO=[{h:"SHIFT MANAGER",f:[["wx","WX/HLD"],["rgzfw","RGZFW"],["div","Diverted Flights"],["fuel","Fueled Aircraft"],["sys","System failures"]]},{h:"ATC MANAGEMENT",f:[["fl","ATC FL Capping"],["atfcm","ATFCM Regulations"],["oth","Others"]]}];
 const TPL=[
 {id:"ini",g:"Turno",t:"Início de turno",c:"#f59e0b",ic:"sun",i:["Briefing com DM cessante","Log OCC lido","Pendentes identificados","Frota / AOG / MEL revistos","Spares e reservas de tripulação","Meteo e NOTAM revistos","ATFM / slots verificados","Curfews em risco identificados"]},
@@ -300,7 +301,7 @@ async function sync(){if(!KEY)return;if(syncing){syncAgain=true;return}
     let ch=false;
     (j.docs||[]).forEach(x=>{if(dirty.has(x.id)||!x.data)return;const cur=docOf(x.id);if(cur&&upd(cur)>=x.updated)return;
       if(x.id==="cfg"){cfg=x.data;cfg.extra=cfg.extra||{};ch=true}else if(x.id.startsWith("d-")){days[x.id.slice(2)]=x.data;ch=true}});
-    since=j.now||since;lastSync=Date.now();local();live=true;setSync(true,dirty.size?"A gravar…":"Sincronizado");
+    since=j.now||since;lastSync=Date.now();if(ch)migrateHours();local();live=true;setSync(true,dirty.size?"A gravar…":"Sincronizado");
     if(ch){renderCal();const a=document.activeElement;if(!(a&&dp.contains(a)&&(a.tagName==="TEXTAREA"||a.tagName==="INPUT")))renderDay()}}
   catch(e){live=false;setSync(false,"Sem rede · guardado no dispositivo")}
   syncing=false;if(syncAgain||(live&&dirty.size))setTimeout(sync,800)}
@@ -338,7 +339,7 @@ function renderDay(){
   const d=getDay(sel),dt=fromKey(sel),s=SK[d.shift];
   const nC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+doneOf(d,t),0),tC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+items(t).length,0);
   const title=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"});
-  $("#dp").innerHTML=`<div class="dh"><h2>${esc(title.charAt(0).toUpperCase()+title.slice(1))}<small>${sel===todayK?"Hoje · ":""}${s?esc(s.n)+(d.start?` · <span class="mono">${esc(d.start)}–${esc(d.end)}</span>`:""):"Sem turno marcado"}</small></h2>
+  $("#dp").innerHTML=`<div class="dh"><h2>${esc(title.charAt(0).toUpperCase()+title.slice(1))}<small>${sel===todayK?"Hoje · ":""}${s?esc(s.n)+(d.code?" "+esc(d.code):"")+(d.start?` · <span class="mono" id="dsub">${esc(d.start)}–${esc(d.end)}</span>`:""):"Sem turno marcado"}</small></h2>
     <div class="seg">${ST.map(x=>`<button class="sb${d.shift===x.k?" on":""}" data-s="${x.k}" style="--c:var(--${x.k})"><i></i>${x.n}</button>`).join("")}</div>
     ${s&&s.h?`<div class="hrs">Horário <input type="time" id="hs" value="${esc(d.start)}" aria-label="Início"> até <input type="time" id="he" value="${esc(d.end)}" aria-label="Fim"></div>`:""}</div>
   <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="rep" aria-selected="${tab==="rep"}">RDO</button><button class="tab" role="tab" data-t="chk" aria-selected="${tab==="chk"}">Checklists<span>${nC}/${tC}</span></button></div>
@@ -368,14 +369,14 @@ $("#prev").onclick=()=>{winStart=addD(winStart,-7);renderCal()};
 $("#next").onclick=()=>{winStart=addD(winStart,7);renderCal()};
 $("#today").onclick=()=>{winStart=addD(fromKey(todayK),-1);sel=todayK;render();$("#days").scrollLeft=0};
 $("#days").addEventListener("click",e=>{const b=e.target.closest(".day");if(!b)return;const k=b.dataset.k;
-  if(paint){edit(k,d=>{const s=paint==="-"?"":paint;d.shift=s;d.code="";const h=SK[s]?.h;d.start=h?h[0]:"";d.end=h?h[1]:""});if(k===sel)renderDay();renderCal();return}
+  if(paint){edit(k,d=>{const s=paint==="-"?"":paint;d.shift=s;d.code="";const h=hoursOf(s);d.start=h?h[0]:"";d.end=h?h[1]:""});if(k===sel)renderDay();renderCal();return}
   sel=k;chk=null;render();
   if(innerWidth<920)$("#dp").scrollIntoView({behavior:"smooth",block:"start"})});
 $("#legend").addEventListener("click",e=>{const b=e.target.closest("[data-p]");if(!b)return;paint=paint===b.dataset.p?null:b.dataset.p;renderCal()});
 $("#paint").addEventListener("click",e=>{if(e.target.id==="pdone"){paint=null;renderCal()}});
 const dp=$("#dp");
 dp.addEventListener("click",async e=>{
-  const s=e.target.closest("[data-s]");if(s){const k=s.dataset.s;edit(sel,d=>{d.shift=d.shift===k?"":k;d.code="";const h=SK[d.shift]?.h;if(h&&!d.start){d.start=h[0];d.end=h[1]}if(!SK[d.shift]?.h){d.start="";d.end=""}});render();return}
+  const s=e.target.closest("[data-s]");if(s){const k=s.dataset.s;edit(sel,d=>{d.shift=d.shift===k?"":k;d.code="";const h=hoursOf(d.shift);d.start=h?h[0]:"";d.end=h?h[1]:""});render();return}
   const t=e.target.closest("[data-t]");if(t){tab=t.dataset.t;renderDay();return}
   const oc=e.target.closest("[data-oc]");if(oc){chk=oc.dataset.oc;renderDay();$("#dp").scrollIntoView({block:"start",behavior:"smooth"});return}
   if(e.target.closest("[data-back]")){chk=null;editing=false;renderDay();return}
@@ -400,7 +401,7 @@ dp.addEventListener("submit",e=>{e.preventDefault();
 dp.addEventListener("input",e=>{const t=e.target;
   if(t.dataset.rep){fit(t);edit(sel,d=>{d.rep=d.rep||{};d.rep[t.dataset.rep]=t.value},700);renderCal();markSaved()}
 
-  else if(t.id==="hs"||t.id==="he"){edit(sel,d=>{d[t.id==="hs"?"start":"end"]=t.value},700)}});
+  else if(t.id==="hs"||t.id==="he"){edit(sel,d=>{d[t.id==="hs"?"start":"end"]=t.value},700);const sub=$("#dsub");const d=getDay(sel);if(sub)sub.textContent=`${d.start}–${d.end}`}});
 function markSaved(){const s=$("#saved");if(s)s.textContent="Guardado "+new Date().toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"})}
 const secText=(d,g)=>[g.h].concat(g.f.map(([k,l])=>`${l}: ${(d.rep?.[k]||"").trim()||"NIL"}`)).join("\n");
 function repText(d){return RDO.map(g=>secText(d,g)).join("\n\n")}
@@ -549,7 +550,7 @@ mbox.addEventListener("click",e=>{if(e.target.id!=="pcont"||!pl)return;const dd=
   if(Object.values(imp.map).every(m=>m.s))buildImp(true);else step2()});
 let imp=null;
 mbox.addEventListener("click",e=>{if(e.target.id==="mx")closeM();if(e.target.id==="mback"){pl=null;step1()}if(e.target.id==="mok")applyImp();
-  const mb=e.target.closest("[data-ms]");if(mb&&imp){const c=mb.closest("[data-code]").dataset.code,k=mb.dataset.ms;const cur=imp.map[c]||{};cur.s=k;if(SK[k]?.h&&!cur.h)cur.h=SK[k].h.slice();if(!SK[k]?.h)delete cur.h;imp.map[c]=cur;keepMon();step2()}
+  const mb=e.target.closest("[data-ms]");if(mb&&imp){const c=mb.closest("[data-code]").dataset.code,k=mb.dataset.ms;const cur=imp.map[c]||{};cur.s=k;if(SK[k]?.h&&!cur.h)cur.h=hoursOf(k);if(!SK[k]?.h)delete cur.h;imp.map[c]=cur;keepMon();step2()}
   if(e.target.id==="mcont")buildImp()});
 mbox.addEventListener("input",e=>{const t=e.target;if(t.dataset.hs!=null||t.dataset.he!=null){const c=t.closest("[data-code]").dataset.code;const m=imp.map[c];m.h=m.h||["",""];m.h[t.dataset.hs!=null?0:1]=t.value}});
 const keepMon=()=>{const v=$("#imon")?.value;if(v){const [y,m]=v.split("-").map(Number);imp.mon={y,m}}};
@@ -601,7 +602,7 @@ function step3(){const ds=parsed.days,ov=ds.filter(d=>days[d.date]?.shift&&days[
   <div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mback">Outro ficheiro</button><button class="btn" id="mok">Importar ${ds.length} dias</button></div>`}
 function applyImp(){if(!parsed)return;const rep=$("#mrep")?$("#mrep").checked:true;let n=0;
   parsed.days.forEach(x=>{const cur=days[x.date];if(cur?.shift&&cur.shift!==x.shift&&!rep)return;
-    edit(x.date,d=>{d.shift=x.shift;d.code=String(x.code||"").slice(0,6);const h=SK[x.shift].h;d.start=x.start||(h?h[0]:"");d.end=x.end||(h?h[1]:"");if(!h){d.start="";d.end=""}});n++});
+    edit(x.date,d=>{d.shift=x.shift;d.code=String(x.code||"").slice(0,6);const h=hoursOf(x.shift);d.start=x.start||(h?h[0]:"");d.end=x.end||(h?h[1]:"");if(!h){d.start="";d.end=""}});n++});
   {const a=parsed.days[0].date,b=parsed.days[parsed.days.length-1].date;if(!(a<=todayK&&todayK<=b))winStart=fromKey(a)}closeM();render();toast(n+" dias importados")}
 const tick=()=>{$("#clk").innerHTML=new Date().toISOString().slice(11,16)+"<small>UTC</small>"};tick();setInterval(tick,10000);
 /* settings & login */
@@ -611,7 +612,9 @@ function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-
   <p style="margin:6px 0 0">Use este código para entrar noutros dispositivos. Não o partilhe — quem o tiver vê os seus dados.</p></div>
   <div class="fld"><label>Sincronização</label><p style="margin:0">${live?"Ligado":"Sem ligação"} · última ${ls} · ${dirty.size} alteração(ões) por enviar</p></div>
   <div class="fld"><label>Instalar no ecrã principal</label><p style="margin:0">iPhone: Safari → Partilhar → “Adicionar ao ecrã principal”. PC: Chrome/Edge → ícone de instalar na barra de endereço. Depois funciona sem rede.</p></div>
-  <div class="fld"><label for="cy">Apagar turnos importados de um ano</label><div style="display:flex;gap:8px"><select id="cy" class="sel">${[-1,0,1,2].map(k=>`<option>${new Date().getFullYear()+k}</option>`).join("")}</select><button class="btn sec" id="cyb" style="flex:none;color:#dc2626">Apagar turnos</button></div><p style="margin:6px 0 0">Só apaga os turnos da escala; o RDO e as checklists ficam.</p></div>
+  <div class="fld"><label>Horário de cada turno</label>${ST.filter(x=>x.h).map(x=>{const h=hoursOf(x.k);return `<div class="hrs" style="margin-top:6px"><b style="width:64px;color:var(--ink)">${x.n}</b><input type="time" data-dh="${x.k}|0" value="${h[0]}" aria-label="${x.n} início"> até <input type="time" data-dh="${x.k}|1" value="${h[1]}" aria-label="${x.n} fim"></div>`}).join("")}
+  <p style="margin:6px 0 0">Usado quando marca um turno. Ao mudar, os dias de hoje em diante com o horário antigo também mudam.</p></div>
+  <div class="fld"><label for="cy">Apagar turnos importados de um ano</label><div style="display:flex;gap:8px"><select id="cy" class="sel">${[-1,0,1,2].map(k=>`<option${k===0?" selected":""}>${new Date().getFullYear()+k}</option>`).join("")}</select><button class="btn sec" id="cyb" style="flex:none;color:#dc2626">Apagar turnos</button></div><p style="margin:6px 0 0">Só apaga os turnos da escala; o RDO e as checklists ficam.</p></div>
   <details class="fld"><summary style="cursor:pointer;font-weight:600">Avançado</summary><label for="sapi" style="margin-top:8px">Servidor</label><input id="sapi" value="${esc(API)}"></details>
   <div class="bar" style="justify-content:space-between"><button class="btn sec" id="sout" style="color:#dc2626">Sair deste dispositivo</button><button class="btn" id="mx">Fechar</button></div>`;mod.classList.add("on")}
 $("#setBtn").onclick=settings;
@@ -624,14 +627,19 @@ mbox.addEventListener("click",async e=>{const id=e.target.id;
     ks.forEach(k=>edit(k,d=>{d.shift="";d.code="";d.start="";d.end=""}));render();closeM();toast(ks.length+" turnos de "+y+" apagados")}
   if(id==="sout"){if(dirty.size&&!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent="Há dados por enviar — tocar outra vez para sair";return}
     try{localStorage.removeItem(LK);localStorage.removeItem("occ-key")}catch(_){}KEY="";cfg={extra:{}};days={};dirty=new Set();closeM();render();showLogin()}});
-mbox.addEventListener("change",e=>{if(e.target.id==="sapi"){API=e.target.value.trim()||API_DEF;try{localStorage.setItem("occ-api",API)}catch(_){}sync()}});
+mbox.addEventListener("change",e=>{const dh=e.target.dataset.dh;if(dh&&e.target.value){const [k,i]=dh.split("|");const old=hoursOf(k),nh=old.slice();nh[+i]=e.target.value;
+    cfg.hours=cfg.hours||{};cfg.hours[k]=nh;saveCfg();let n=0;Object.keys(days).forEach(dk=>{const d=days[dk];if(dk>=todayK&&d.shift===k&&d.start===old[0]&&d.end===old[1]){edit(dk,x=>{x.start=nh[0];x.end=nh[1]});n++}});render();toast(n?`Horário atualizado em ${n} dia(s)`:"Horário guardado");return}
+  if(e.target.id==="sapi"){API=e.target.value.trim()||API_DEF;try{localStorage.setItem("occ-api",API)}catch(_){}sync()}});
 const lg=$("#login");
 function showLogin(msg){lg.classList.add("on");$("#lerr").textContent=msg||"";setTimeout(()=>$("#lk").focus(),50)}
 function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(12);crypto.getRandomValues(r);let s="OCC";for(let i=0;i<12;i++){if(i%4===0)s+="-";s+=A[r[i]%A.length]}return s}
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-function startWith(k){KEY=k;try{localStorage.setItem("occ-key",k)}catch(_){}LK="occ-"+fnv(k);loadLocal();lg.classList.remove("on");render();setSync(false,"A ligar…");sync()}
+function migrateHours(){if(cfg.hmig)return;let n=0;Object.keys(days).forEach(dk=>{const d=days[dk];
+    if(d.shift==="M"&&d.start==="07:00"&&d.end==="15:00"&&!/^M046$/i.test(d.code||"")){edit(dk,x=>{x.start="06:30";x.end="15:00"});n++}
+    else if(d.shift==="T"&&d.start==="15:00"&&d.end==="23:00"){edit(dk,x=>{x.start="14:45";x.end="23:15"});n++}});cfg.hmig=1;saveCfg()}
+function startWith(k){KEY=k;try{localStorage.setItem("occ-key",k)}catch(_){}LK="occ-"+fnv(k);loadLocal();migrateHours();lg.classList.remove("on");render();setSync(false,"A ligar…");sync()}
 if(KEY)startWith(KEY);else{render();showLogin()}
 function rollDay(){const nk=key(new Date());if(nk===todayK)return;const old=todayK;todayK=nk;if(sel===old)sel=nk;winStart=addD(fromKey(nk),-1);render();$("#days").scrollLeft=0}
 setInterval(rollDay,60000);
