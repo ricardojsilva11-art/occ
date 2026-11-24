@@ -69,6 +69,9 @@ button{cursor:pointer;border:0;background:none}
 .chip{min-width:28px;height:22px;padding:0 6px;border-radius:7px;font:600 12px "IBM Plex Mono";display:grid;place-items:center;color:#fff;background:var(--c)}
 .chip.empty{background:transparent}
 .dot{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.edt{width:100%;display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:10px 14px;min-height:44px;border-radius:12px;background:var(--card2);color:var(--mute);font-weight:600;font-size:14px}
+.edt .chev{transition:transform .15s}.edt.on .chev{transform:rotate(90deg)}
+#edtBox .legend{margin-top:10px}
 .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
 .lg{display:flex;align-items:center;gap:6px;height:40px;padding:0 12px 0 6px;border-radius:12px;background:var(--card2);font-size:14px;font-weight:500;border:2px solid transparent}
 .lg.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,var(--card))}
@@ -220,9 +223,12 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
     <button class="imp" id="impBtn">⇪ Importar escala (PDF ou Excel)</button>
     <div class="wd"><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span></div>
     <div class="days" id="days"></div>
+    <button class="edt" id="edtBtn" aria-expanded="false"><span id="edtTxt">✎ Editar escala e ver totais</span><span class="chev">›</span></button>
+    <div id="edtBox" hidden>
     <div class="legend" id="legend"></div>
     <div class="paint" id="paint"></div>
     <div class="stats" id="stats"></div>
+    </div>
   </section>
   <section class="card dp" id="dp"></section>
 </div>
@@ -342,8 +348,8 @@ function renderDay(){
   const nC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+doneOf(d,t),0),tC=allT().filter(t=>t.g==="Turno").reduce((a,t)=>a+items(t).length,0);
   const title=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long"});
   $("#dp").innerHTML=`<div class="dh"><h2>${esc(title.charAt(0).toUpperCase()+title.slice(1))}<small>${sel===todayK?"Hoje · ":""}${s?esc(s.n)+(d.code?" "+esc(d.code):"")+(d.start?` · <span class="mono" id="dsub">${esc(d.start)}–${esc(d.end)}</span>`:""):"Sem turno marcado"}</small></h2>
-    <div class="seg">${ST.map(x=>`<button class="sb${d.shift===x.k?" on":""}" data-s="${x.k}" style="--c:var(--${x.k})"><i></i>${x.n}</button>`).join("")}</div>
-    ${s&&s.h?`<div class="hrs">Horário <input type="time" id="hs" value="${esc(d.start)}" aria-label="Início"> até <input type="time" id="he" value="${esc(d.end)}" aria-label="Fim"></div>`:""}</div>
+    ${showEd?`<div class="seg">${ST.map(x=>`<button class="sb${d.shift===x.k?" on":""}" data-s="${x.k}" style="--c:var(--${x.k})"><i></i>${x.n}</button>`).join("")}</div>`:""}
+    ${showEd&&s&&s.h?`<div class="hrs">Horário <input type="time" id="hs" value="${esc(d.start)}" aria-label="Início"> até <input type="time" id="he" value="${esc(d.end)}" aria-label="Fim"></div>`:""}</div>
   <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="rep" aria-selected="${tab==="rep"}">RDO</button><button class="tab" role="tab" data-t="chk" aria-selected="${tab==="chk"}">Checklists<span>${nC}/${tC}</span></button></div>
   <div class="pane" id="pane">${tab==="rep"?repPane(d):chkPane(d)}</div>`}
 function repPane(d){return RDO.map((g,gi)=>`<div class="rsec"><h3><span>${g.h}</span><button class="cp" data-cp="${gi}">⧉ Copiar</button></h3>${g.f.map(([k,l])=>`<div class="rf"><label for="r-${k}">${l}</label><textarea id="r-${k}" data-rep="${k}" rows="1" placeholder="NIL">${esc(d.rep?.[k]||"")}</textarea></div>`).join("")}</div>`).join("")+
@@ -364,9 +370,10 @@ function chkPane(d){
   <p class="grp">IROPS · toque quando acontecer</p><div class="tls">${allT().filter(t=>t.g==="IROPS").map(tile).join("")}${addT("IROPS")}</div>
   ${editing&&hid?`<button class="pill" data-restore style="margin-bottom:8px">Repor ${hid} checklist(s) original(is) apagada(s)</button>`:""}
   <p class="note">Modelo genérico — os procedimentos da companhia (OM-A, ERP, MCC) prevalecem. Itens adicionados ficam em todos os dias.</p>`}
-function render(){renderCal();renderDay()}
+function render(){renderCal();renderDay();applyEd()}
 const _rd=renderDay;renderDay=function(){_rd();document.querySelectorAll("[data-rep]").forEach(fit)};
 /* events */
+$("#edtBtn").onclick=()=>{showEd=!showEd;try{localStorage.setItem("occ-ed",showEd?"1":"0")}catch(_){}if(!showEd&&paint){paint=null}applyEd();render()};
 $("#goto").addEventListener("change",e=>{const v=e.target.value;if(!v)return;sel=v;chk=null;winStart=addD(fromKey(v),-BACK);render();toSel();e.target.value=""});
 $("#prev").onclick=()=>{sel=key(addD(fromKey(sel),-7));chk=null;if(sel<key(addD(winStart,3)))winStart=addD(fromKey(sel),-BACK);render();toSel()};
 $("#next").onclick=()=>{sel=key(addD(fromKey(sel),7));chk=null;if(sel>key(addD(winStart,WN-8)))winStart=addD(fromKey(sel),-BACK);render();toSel()};
@@ -639,7 +646,9 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="12";
+const APPV="13";
+let showEd=false;try{showEd=localStorage.getItem("occ-ed")==="1"}catch(_){}
+function applyEd(){const b=$("#edtBox");if(b)b.hidden=!showEd;const t=$("#edtBtn");if(t){t.setAttribute("aria-expanded",showEd);t.classList.toggle("on",showEd)}$("#edtTxt")&&($("#edtTxt").textContent=showEd?"Esconder edição da escala":"✎ Editar escala e ver totais")}
 function fixHours(){const def={M:["06:30","15:00"],T:["14:45","23:15"],N:["23:00","07:00"]},old=[["07:00","15:00"],["15:00","23:00"]];
   Object.keys(days).forEach(dk=>{const d=days[dk];if(!def[d.shift]||(d.code&&KNOWN[String(d.code).toUpperCase()]))return;const mine=hoursOf(d.shift);
     const wrong=ST.some(x=>x.h&&x.k!==d.shift&&(()=>{const h=hoursOf(x.k);return d.start===h[0]&&d.end===h[1]})())||old.some(h=>d.start===h[0]&&d.end===h[1]&&!(mine[0]===h[0]&&mine[1]===h[1]));
