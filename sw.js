@@ -1,9 +1,9 @@
 // OCC Diário — funciona sem rede
-const V = "occ-v13";
+const V = "occ-v14";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest",
   "icon-180.png", "icon-192.png", "icon-512.png",
-  "vendor/xlsx.full.min.js", "vendor/pdf.min.js", "vendor/pdf.worker.min.js",
+  "vendor/xlsx.full.min.js", "vendor/pdf.min.js", "vendor/pdf.worker.min.js", "vendor/jspdf.umd.min.js",
 ];
 
 self.addEventListener("install", (e) => {
