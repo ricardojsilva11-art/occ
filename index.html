@@ -89,8 +89,9 @@ button{cursor:pointer;border:0;background:none}
 .sb{height:44px;min-width:52px;padding:0 12px;border-radius:12px;background:var(--card2);font-weight:600;font-size:14px;border:2px solid transparent;display:flex;align-items:center;gap:6px}
 .sb i{width:10px;height:10px;border-radius:3px;background:var(--c)}
 .sb.on{background:var(--c);color:#fff}.sb.on i{background:#fff}
-.hrs{display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap;font-size:14px;color:var(--mute)}
-.hrs input{width:150px}
+.hrs{display:grid;grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr);gap:8px 10px;margin-top:12px;align-items:center;font-size:14px;color:var(--mute);max-width:460px}
+.hrs input{width:100%;min-width:0;padding:8px 6px;text-align:center}
+.hrs b{min-width:56px}
 input,textarea{font-size:16px;border:1px solid var(--line);border-radius:12px;background:var(--card2);padding:10px 12px;width:100%;min-height:44px}
 textarea{resize:vertical;min-height:72px;line-height:1.45}
 .tabs{display:flex;gap:4px;padding:10px 12px 0;border-bottom:1px solid var(--line)}
@@ -192,9 +193,12 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .toast.on{opacity:1}
 .imp{width:100%;margin:2px 0 12px;height:48px;border-radius:12px;border:2px dashed color-mix(in srgb,var(--acc) 45%,var(--line));color:var(--acc);font-weight:600;font-size:15px;background:color-mix(in srgb,var(--acc) 6%,var(--card))}
 .imp:hover{background:color-mix(in srgb,var(--acc) 12%,var(--card))}
-.mod{position:fixed;inset:0;background:rgb(8 15 25/.55);display:none;place-items:center;padding:16px;z-index:40}
+.mod{position:fixed;inset:0;background:rgb(8 15 25/.55);display:none;place-items:center;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));z-index:40;overscroll-behavior:contain}
 .mod.on{display:grid}
-.mbox{width:min(560px,100%);max-height:88vh;overflow:auto;background:var(--card);border-radius:18px;padding:20px;box-shadow:0 20px 60px rgb(0 0 0/.3)}
+.mbox{position:relative;width:min(560px,100%);max-height:calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));max-height:calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--card);border-radius:18px;padding:20px;box-shadow:0 20px 60px rgb(0 0 0/.3)}
+.mtop{position:sticky;top:-20px;margin:-20px -20px 10px;padding:16px 20px 10px;background:var(--card);display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:2;border-bottom:1px solid var(--line)}
+.mtop h3{margin:0}
+.mclose{width:40px;height:40px;border-radius:12px;background:var(--card2);font-size:18px;color:var(--ink)}
 .mbox h3{margin:0 0 6px;font-size:22px}
 .mbox p{margin:0 0 14px;color:var(--mute);font-size:14px}
 .drop{display:block;border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;cursor:pointer;margin-bottom:12px;font-weight:600}
@@ -466,11 +470,11 @@ async function copyText(t,label){let ok=false;
   if(!ok){try{const a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;left:0;opacity:0";document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);ok=document.execCommand("copy");a.remove()}catch(e){}}
   if(ok){toast(label+" copiado");return}
   mbox.innerHTML=`<h3 id="mt">${esc(label)}</h3><p>Selecione o texto e copie (Ctrl+C, ou tocar sem largar → Copiar).</p><textarea class="cpbox" id="cpb" readonly></textarea><div class="bar" style="justify-content:flex-end"><button class="btn" id="mx">Fechar</button></div>`;
-  mod.classList.add("on");const b=$("#cpb");b.value=t;b.focus();b.select()}
+  (document.body.style.overflow="hidden",mod.classList.add("on"));const b=$("#cpb");b.value=t;b.focus();b.select()}
 const fit=t=>{t.style.height="auto";t.style.height=t.scrollHeight+2+"px"};
 /* checklist editor */
 function confirmDel(t){mbox.innerHTML=`<h3 id="mt">Apagar “${esc(t.t)}”?</h3><p>${TPL.some(x=>x.id===t.id)?"É uma checklist original — pode repô-la mais tarde em “Editar checklists”.":"Esta checklist e os seus itens serão apagados."}</p><div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mx">Cancelar</button><button class="btn" id="mdel" style="background:#dc2626">Apagar</button></div>`;
-  mod.classList.add("on");$("#mdel").onclick=()=>{if(TPL.some(x=>x.id===t.id)){cfg.hidden=(cfg.hidden||[]).concat(t.id)}else{cfg.lists=(cfg.lists||[]).filter(x=>x.id!==t.id);delete cfg.extra[t.id]}saveCfg();closeM();renderDay();renderCal();toast("Checklist apagada")}}
+  (document.body.style.overflow="hidden",mod.classList.add("on"));$("#mdel").onclick=()=>{if(TPL.some(x=>x.id===t.id)){cfg.hidden=(cfg.hidden||[]).concat(t.id)}else{cfg.lists=(cfg.lists||[]).filter(x=>x.id!==t.id);delete cfg.extra[t.id]}saveCfg();closeM();renderDay();renderCal();toast("Checklist apagada")}}
 function newList(g){let col=SW[(cfg.lists||[]).length%SW.length],ic="list";
   const draw=()=>{mbox.innerHTML=`<h3 id="mt">Nova checklist</h3><p>Fica em todos os dias. Depois de criar, acrescente os itens.</p>
   <div class="fld"><label for="nl1">Nome</label><input id="nl1" placeholder="Ex.: Bird strike, Greve, Night stop LAD" value="${esc($("#nl1")?.value||"")}"></div>
@@ -478,20 +482,20 @@ function newList(g){let col=SW[(cfg.lists||[]).length%SW.length],ic="list";
   <div class="fld"><label>Cor</label><div class="sws">${SW.map(c=>`<button class="sw${c===col?" on":""}" data-sw="${c}" style="background:${c}" aria-label="Cor ${c}"></button>`).join("")}</div></div>
   <div class="fld"><label>Ícone</label><div class="sws">${ICK.map(k=>`<button class="icb${k===ic?" on":""}" data-ic="${k}" style="--k:${col}" aria-label="${k}">${svg(k)}</button>`).join("")}</div></div>
   <div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mx">Cancelar</button><button class="btn" id="mnew" style="background:${col}">Criar checklist</button></div>`};
-  draw();mod.classList.add("on");$("#nl1").focus();
+  draw();(document.body.style.overflow="hidden",mod.classList.add("on"));$("#nl1").focus();
   mbox.onclick=e=>{const a=e.target.closest("[data-g]"),b=e.target.closest("[data-sw]"),c=e.target.closest("[data-ic]");
     if(a)g=a.dataset.g;if(b)col=b.dataset.sw;if(c)ic=c.dataset.ic;if(a||b||c){draw();return}
     if(e.target.id==="mnew"){const n=$("#nl1").value.trim();if(!n){$("#nl1").focus();return}const id="u"+Date.now().toString(36);
       cfg.lists=(cfg.lists||[]).concat({id,g,t:n.slice(0,40),c:col,ic,i:[]});saveCfg();mbox.onclick=null;closeM();chk=id;editing=false;tab="chk";renderDay();setTimeout(()=>document.querySelector(`[data-add="${id}"] input`)?.focus(),50)}};}
 /* import */
 const mod=$("#mod"),mbox=$("#mbox");let parsed=null;
-const closeM=()=>{mod.classList.remove("on");parsed=null;mbox.onclick=null};
+const closeM=()=>{document.body.style.overflow="";mod.classList.remove("on");parsed=null;mbox.onclick=null};
 mod.addEventListener("click",e=>{if(e.target===mod)closeM()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&mod.classList.contains("on"))closeM()});
 function step1(err){mbox.innerHTML=`<h3 id="mt">Importar escala</h3><p>Excel ou PDF da escala. Mapa de Serviço (PDF) ou Escala Master (Excel): a app mostra a lista de pessoas, escolhe a sua linha e já conhece os códigos (M082, T034, 019N, TRNG…).</p>
   <div class="fld"><label for="pname">Nome como aparece na escala <span style="font-weight:400;color:var(--mute)">(só para outros formatos)</span></label><input id="pname" value="${esc(cfg.name||"")}" placeholder="Ex.: R. Silva ou 12345"></div>
   <label class="drop" id="drop">Escolher ficheiro<small>.xlsx · .xls · .csv · .pdf</small><input type="file" id="pf" accept=".pdf,.xlsx,.xls,.csv,application/pdf"></label>
-  ${err?`<p class="err">${esc(err)}</p>`:""}<div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mx">Cancelar</button></div>`;mod.classList.add("on")}
+  ${err?`<p class="err">${esc(err)}</p>`:""}<div class="bar" style="justify-content:flex-end"><button class="btn sec" id="mx">Cancelar</button></div>`;(document.body.style.overflow="hidden",mod.classList.add("on"))}
 $("#impBtn").onclick=()=>step1();
 const loadJs=src=>new Promise((ok,no)=>{if(document.querySelector(`script[src="${src}"]`))return ok();const t=document.createElement("script");t.src=src;t.onload=ok;t.onerror=()=>no(new Error("load"));document.head.appendChild(t)});
 const nrm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase().replace(/\s+/g," ").trim();
@@ -605,7 +609,7 @@ mbox.addEventListener("click",e=>{if(e.target.id!=="pcont"||!pl)return;const dd=
   [...new Set(cells.map(c=>c.code).filter(Boolean))].forEach(c=>imp.map[c]=guess(c)||{s:""});
   if(Object.values(imp.map).every(m=>m.s))buildImp(true);else step2()});
 let imp=null;
-mbox.addEventListener("click",e=>{if(e.target.id==="mx")closeM();if(e.target.id==="mback"){pl=null;step1()}if(e.target.id==="mok")applyImp();
+mbox.addEventListener("click",e=>{if(e.target.id==="mx"||e.target.closest("[data-close]"))closeM();if(e.target.id==="mback"){pl=null;step1()}if(e.target.id==="mok")applyImp();
   const mb=e.target.closest("[data-ms]");if(mb&&imp){const c=mb.closest("[data-code]").dataset.code,k=mb.dataset.ms;const cur=imp.map[c]||{};cur.s=k;if(SK[k]?.h&&!cur.h)cur.h=hoursOf(k);if(!SK[k]?.h)delete cur.h;imp.map[c]=cur;keepMon();step2()}
   if(e.target.id==="mcont")buildImp()});
 mbox.addEventListener("input",e=>{const t=e.target;if(t.dataset.hs!=null||t.dataset.he!=null){const c=t.closest("[data-code]").dataset.code;const m=imp.map[c];m.h=m.h||["",""];m.h[t.dataset.hs!=null?0:1]=t.value}});
@@ -663,7 +667,7 @@ function applyImp(){if(!parsed)return;const rep=$("#mrep")?$("#mrep").checked:tr
 const tick=()=>{$("#clk").innerHTML=new Date().toISOString().slice(11,16)+"<small>UTC</small>"};tick();setInterval(tick,10000);
 /* settings & login */
 function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}):"—";
-  mbox.innerHTML=`<h3 id="mt">Definições</h3>
+  mbox.innerHTML=`<div class="mtop"><h3 id="mt">Definições</h3><button class="mclose" id="mx" aria-label="Fechar">✕</button></div>
   <div class="fld"><label>O seu código pessoal</label><div style="display:flex;gap:8px"><input id="skey" type="password" readonly value="${esc(KEY)}" class="mono"><button class="btn sec" id="sshow" style="flex:none">Ver</button><button class="btn sec" id="scopy" style="flex:none">Copiar</button></div>
   <p style="margin:6px 0 0">Use este código para entrar noutros dispositivos. Não o partilhe — quem o tiver vê os seus dados.</p></div>
   <div class="fld"><label>Sincronização</label><p style="margin:0">${live?"Ligado":"Sem ligação"} · última ${ls} · ${dirty.size} alteração(ões) por enviar</p></div>
@@ -673,7 +677,7 @@ function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-
   <p style="margin:6px 0 0">Usado quando marca um turno. Ao mudar, os dias de hoje em diante com o horário antigo também mudam.</p></div>
   <div class="fld"><label for="cy">Apagar turnos importados de um ano</label><div style="display:flex;gap:8px"><select id="cy" class="sel">${[-1,0,1,2].map(k=>`<option${k===0?" selected":""}>${new Date().getFullYear()+k}</option>`).join("")}</select><button class="btn sec" id="cyb" style="flex:none;color:#dc2626">Apagar turnos</button></div><p style="margin:6px 0 0">Só apaga os turnos da escala; o RDO e as checklists ficam.</p></div>
   <details class="fld"><summary style="cursor:pointer;font-weight:600">Avançado</summary><label for="sapi" style="margin-top:8px">Servidor</label><input id="sapi" value="${esc(API)}"></details>
-  <p style="font-size:12px;color:var(--mute);margin:0 0 10px">Versão ${APPV}</p><div class="bar" style="justify-content:space-between"><button class="btn sec" id="sout" style="color:#dc2626">Sair deste dispositivo</button><button class="btn" id="mx">Fechar</button></div>`;mod.classList.add("on")}
+  <p style="font-size:12px;color:var(--mute);margin:0 0 10px">Versão ${APPV}</p><div class="bar" style="justify-content:space-between"><button class="btn sec" id="sout" style="color:#dc2626">Sair deste dispositivo</button><button class="btn" data-close>Fechar</button></div>`;(document.body.style.overflow="hidden",mod.classList.add("on"))}
 $("#setBtn").onclick=settings;
 mbox.addEventListener("click",async e=>{const id=e.target.id;
   if(id==="sshow"){const k=$("#skey");k.type=k.type==="password"?"text":"password"}
@@ -694,7 +698,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="19";
+const APPV="20";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
