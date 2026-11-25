@@ -688,7 +688,10 @@ const tick=()=>{$("#clk").innerHTML=new Date().toISOString().slice(11,16)+"<smal
 function settings(){const ls=lastSync?new Date(lastSync).toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"}):"—";
   mbox.innerHTML=`<div class="mtop"><h3 id="mt">Definições</h3><button class="mclose" id="mx" aria-label="Fechar">✕</button></div>
   <div class="fld"><label>O seu código pessoal</label><div style="display:flex;gap:8px"><input id="skey" type="password" readonly value="${esc(KEY)}" class="mono"><button class="btn sec" id="sshow" style="flex:none">Ver</button><button class="btn sec" id="scopy" style="flex:none">Copiar</button></div>
-  <p style="margin:6px 0 0">Use este código para entrar noutros dispositivos. Não o partilhe — quem o tiver vê os seus dados.</p></div>
+  <p style="margin:6px 0 0">A app fica sempre com a sessão aberta neste dispositivo. Só pede o código se apagar a app ou mudar de dispositivo.</p>
+  <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:600">Mudar para um código fácil de lembrar</summary>
+  <p style="margin:6px 0">Escolha algo só seu, com pelo menos 10 caracteres (por exemplo uma frase curta com números). Os seus dados passam para o código novo.</p>
+  <div style="display:flex;gap:8px"><input id="nkey" class="mono" autocapitalize="characters" spellcheck="false" placeholder="Novo código"><button class="btn" id="nkb" style="flex:none">Mudar</button></div><p class="err" id="nkerr"></p></details></div>
   <div class="fld"><label>Sincronização</label><p style="margin:0">${live?"Ligado":"Sem ligação"} · última ${ls} · ${dirty.size} alteração(ões) por enviar</p></div>
   <div class="fld"><label>Instalar no ecrã principal</label><p style="margin:0">iPhone: Safari → Partilhar → “Adicionar ao ecrã principal”. PC: Chrome/Edge → ícone de instalar na barra de endereço. Depois funciona sem rede.</p></div>
   <div class="fld"><label for="pnm">O seu nome (aparece no título do PDF)</label><input id="pnm" value="${esc(cfg.pname||"")}" placeholder="Ex.: Ricardo" maxlength="40"></div>
@@ -701,6 +704,12 @@ $("#setBtn").onclick=settings;
 mbox.addEventListener("click",async e=>{const id=e.target.id;
   if(id==="sshow"){const k=$("#skey");k.type=k.type==="password"?"text":"password"}
   if(id==="scopy")copyText(KEY,"Código");
+  if(id==="nkb"){const k=($("#nkey").value||"").trim().toUpperCase().replace(/\s+/g,"");
+    if(k.length<10){$("#nkerr").textContent="Pelo menos 10 caracteres.";return}
+    if(k===KEY){$("#nkerr").textContent="É igual ao código atual.";return}
+    if(!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent="Confirmar";$("#nkerr").style.color="var(--ink)";$("#nkerr").textContent="Vai passar a entrar com: "+k+". Toque em Confirmar.";return}
+    const oldLK=LK;KEY=k;try{localStorage.setItem("occ-key",k);localStorage.removeItem(oldLK)}catch(_){}LK="occ-"+fnv(k);
+    dirty=new Set(["cfg",...Object.keys(days).map(x=>"d-"+x)]);since=0;cfg._u=Date.now();local();closeM();render();sync();toast("Código mudado — use-o nos outros dispositivos")}
   if(id==="cyb"){const y=$("#cy").value;const ks=Object.keys(days).filter(k=>k.startsWith(y+"-")&&days[k].shift);
     if(!ks.length){toast("Sem turnos em "+y);return}
     if(!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent="Confirmar: apagar "+ks.length+" dias";return}
@@ -717,7 +726,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="23";
+const APPV="24";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
