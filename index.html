@@ -230,7 +230,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .mp .sb{height:38px;min-width:0;font-size:13px}
 @media(max-width:600px){
 .top{gap:10px;padding-left:16px;padding-right:12px;padding-bottom:10px}
-.top h1{font-size:18px}.top h1 small{display:none}
+.top h1{font-size:18px}.top h1 small{font-size:13px;opacity:.85}
 .sync{font-size:0;padding:6px}.sync i{width:10px;height:10px;margin:0}
 .clock{font-size:19px}.clock small{font-size:10px}
 .gear{width:38px;height:38px}
@@ -252,7 +252,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 </head>
 <body>
 <header class="top">
-  <h1>OCC Diário<small>Escala · RDO · checklists</small></h1>
+  <h1>OCC Diário<small id="uname">Escala · RDO · checklists</small></h1>
   <span class="sync" id="sync"><i></i>A ligar…</span>
   <span class="clock" id="clk">--:--<small>UTC</small></span>
   <button class="gear" id="setBtn" aria-label="Definições"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
@@ -428,7 +428,7 @@ function chkPane(d){
   <p class="grp">IROPS · toque quando acontecer</p><div class="tls">${allT().filter(t=>t.g==="IROPS").map(tile).join("")}${addT("IROPS")}</div>
   ${editing&&hid?`<button class="pill" data-restore style="margin-bottom:8px">Repor ${hid} checklist(s) original(is) apagada(s)</button>`:""}
   <p class="note">Modelo genérico — os procedimentos da companhia (OM-A, ERP, MCC) prevalecem. Itens adicionados ficam em todos os dias.</p>`}
-function render(){renderCal();renderDay();applyEd()}
+function render(){renderCal();renderDay();applyEd();const u=$("#uname");if(u)u.textContent=cfg.pname?cfg.pname:"Escala · RDO · checklists"}
 const _rd=renderDay;renderDay=function(){_rd();document.querySelectorAll("[data-rep]").forEach(fit)};
 /* events */
 $("#edtBtn").onclick=()=>{showEd=!showEd;try{localStorage.setItem("occ-ed",showEd?"1":"0")}catch(_){}if(!showEd&&paint){paint=null}applyEd();render()};
@@ -706,7 +706,7 @@ mbox.addEventListener("click",async e=>{const id=e.target.id;
     ks.forEach(k=>edit(k,d=>{d.shift="";d.code="";d.start="";d.end=""}));render();closeM();toast(ks.length+" turnos de "+y+" apagados")}
   if(id==="sout"){if(dirty.size&&!e.target.dataset.sure){e.target.dataset.sure=1;e.target.textContent="Há dados por enviar — tocar outra vez para sair";return}
     try{localStorage.removeItem(LK);localStorage.removeItem("occ-key")}catch(_){}KEY="";cfg={extra:{}};days={};dirty=new Set();closeM();render();showLogin()}});
-mbox.addEventListener("change",e=>{if(e.target.id==="pnm"){cfg.pname=e.target.value.trim().slice(0,40);saveCfg();toast("Nome guardado");return}
+mbox.addEventListener("change",e=>{if(e.target.id==="pnm"){cfg.pname=e.target.value.trim().slice(0,40);saveCfg();render();toast("Nome guardado");return}
   const dh=e.target.dataset.dh;if(dh&&e.target.value){const [k,i]=dh.split("|");const old=hoursOf(k),nh=old.slice();nh[+i]=e.target.value;
     cfg.hours=cfg.hours||{};cfg.hours[k]=nh;saveCfg();let n=0;Object.keys(days).forEach(dk=>{const d=days[dk];if(dk>=todayK&&d.shift===k&&d.start===old[0]&&d.end===old[1]){edit(dk,x=>{x.start=nh[0];x.end=nh[1]});n++}});render();toast(n?`Horário atualizado em ${n} dia(s)`:"Horário guardado");return}
   if(e.target.id==="sapi"){API=e.target.value.trim()||API_DEF;try{localStorage.setItem("occ-api",API)}catch(_){}sync()}});
@@ -716,7 +716,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="21";
+const APPV="22";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
