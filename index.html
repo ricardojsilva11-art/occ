@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>OCC Diário</title>
+<title>OC Diário</title>
 <meta name="theme-color" content="#0b2a4a">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="OCC Diário">
+<meta name="apple-mobile-web-app-title" content="OC Diário">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -253,7 +253,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 </head>
 <body>
 <header class="top">
-  <h1>OCC Diário<small id="uname">Escala · RDO · checklists</small></h1>
+  <h1>OC Diário<small id="uname">Escala · RDO · checklists</small></h1>
   <span class="sync" id="sync"><i></i>A ligar…</span>
   <span class="clock" id="clk">--:--<small>UTC</small></span>
   <button class="gear" id="setBtn" aria-label="Definições"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
@@ -282,7 +282,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 <div class="toast" id="toast"></div>
 <div class="login" id="login"><form class="lbox" id="lf" autocomplete="off">
   <img src="icon-192.png" alt="" width="64" height="64" style="border-radius:16px">
-  <h2>OCC Diário</h2><p>Entre com o seu código pessoal. É ele que separa os seus dados dos de outras pessoas.</p>
+  <h2>OC Diário</h2><p>Entre com o seu código pessoal. É ele que separa os seus dados dos de outras pessoas.</p>
   <input id="lk" class="mono" type="text" autocapitalize="characters" spellcheck="false" placeholder="OCC-XXXX-XXXX-XXXX" aria-label="Código pessoal">
   <p class="err" id="lerr"></p>
   <button class="btn" style="width:100%">Entrar</button>
@@ -726,7 +726,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="25";
+const APPV="26";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
@@ -756,7 +756,7 @@ async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){to
           if(so){doc.setDrawColor(11,92,173);doc.setLineWidth(0.5);doc.line(M+12.6,y+1.9,M+13.4,y+2.7);doc.line(M+13.4,y+2.7,M+14.6,y+0.9);doc.setLineWidth(0.2)}
           doc.setTextColor(so?13:110,so?27:120,so?42:130);doc.text(sl,M+17,y+2.9);y+=sh})});
       y+=4})}
-  doc.setFontSize(8);doc.setTextColor(120,130,140);doc.text("Gerado em "+new Date().toISOString().slice(0,16).replace("T"," ")+" UTC · OCC Diário",M,290);
+  doc.setFontSize(8);doc.setTextColor(120,130,140);doc.text("Gerado em "+new Date().toISOString().slice(0,16).replace("T"," ")+" UTC · OC Diário",M,290);
   const name=`RDO_${d.date}.pdf`,blob=doc.output("blob"),file=new File([blob],name,{type:"application/pdf"});
   try{if(navigator.canShare&&navigator.canShare({files:[file]})&&matchMedia("(pointer:coarse)").matches){await navigator.share({files:[file],title:name});return}}catch(e){if(e&&e.name==="AbortError")return}
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);toast("PDF criado")}

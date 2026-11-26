@@ -1,7 +1,7 @@
 {
-  "name": "OCC Diário",
-  "short_name": "OCC Diário",
-  "description": "Escala, RDO e checklists do Duty Manager OCC",
+  "name": "OC Diário",
+  "short_name": "OC Diário",
+  "description": "Escala, RDO e checklists do Duty Manager OC",
   "start_url": "/occ/?app=1",
   "scope": "/occ/",
   "display": "standalone",
