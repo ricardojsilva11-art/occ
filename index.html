@@ -515,7 +515,7 @@ function cwPane(d){const SE=cwSeason(),S=CWS[SE],auto=!cwSE;
   <div class="cw-ban">${SE==="W"?"❄":"☀"} ${S.n} SCHEDULE ACTIVE <small>${auto?"auto · by date":`manual · <u data-cwse="auto">back to auto</u>`}</small></div>
   ${cwC().sample?`<p class="cw-note cw-warn">⚠ Sample data from the old Excel. Replace flights and curfews in Curfew table before operational use.</p>`:""}
   ${cwV==="fl"?cwFlights(d,SE):cwTable(SE)}</div>`}
-function cwFlights(d,SE){const R=cwAll(d),G=R.filter(r=>!r.c.air).sort((a,b)=>a.c.k-b.c.k),A=R.filter(r=>r.c.air).sort((a,b)=>a.c.eta-b.c.eta);
+function cwFlights(d,SE){const R=cwAll(d),G=R.filter(r=>!r.c.air),A=R.filter(r=>r.c.air).sort((a,b)=>a.c.eta-b.c.eta);
   const n=k=>G.filter(r=>r.c.st[2]===k).length,nr=G.filter(r=>r.c.rot&&r.c.rot[2]===0).length;
   const al=[[n(4),"#5F5E5A","EET MISSING"],[n(7),"#5F5E5A","NO CURFEW"],[n(0),"#791F1F","OUTSIDE CURFEW"],[n(5),"#534AB7","EXT REQUIRED"],[n(6),"#3C3489","EXT REQUESTED"],[n(1),"#A32D2D","CRITICAL"],[n(2),"#BA7517","MONITOR"],[nr,"#3C3489","ROT SHORT"],[A.length,"#0F6E56","AIRBORNE"]].filter(a=>a[0]).map(a=>`<span class="cw-ac" style="background:${a[1]}">${a[0]} ${a[2]}</span>`).join("")||`<span class="cw-ac" style="background:#3B6D11">ALL OK</span>`;
   return `<div class="cw-al">${al}<button class="btn sec" data-cwpaste style="margin-left:auto;height:38px">📋 Paste flight list</button><button class="btn" data-cwqa style="height:38px">+ Add flight</button></div><div class="cw-sec">ON GROUND · ${G.length}</div>${G.map(r=>cwRow(r.fl,r.c,SE)).join("")||'<p class="cw-note">No flights.</p>'}
@@ -1017,7 +1017,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="34";
+const APPV="35";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
