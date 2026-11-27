@@ -269,6 +269,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .cw-ban{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;font-weight:700;font-size:14px;margin-bottom:10px;color:#fff;background:var(--cwc)}
 .cw-ban small{margin-inline-start:auto;font-weight:500;font-size:12px;opacity:.9}
 .cw-ban u{cursor:pointer}
+.cwq{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}
 .cw-al{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .cw-ac{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;color:#fff}
 .cw-sec{padding:7px 12px;font-size:12px;font-weight:700;color:var(--mute);background:var(--card2);border-radius:10px;margin:8px 0 4px;letter-spacing:.03em}
@@ -507,7 +508,7 @@ function cwPane(d){const SE=cwSeason(),S=CWS[SE],auto=!cwSE;
 function cwFlights(d,SE){const R=cwAll(d),G=R.filter(r=>!r.c.air).sort((a,b)=>a.c.k-b.c.k),A=R.filter(r=>r.c.air).sort((a,b)=>a.c.eta-b.c.eta);
   const n=k=>G.filter(r=>r.c.st[2]===k).length,nr=G.filter(r=>r.c.rot&&r.c.rot[2]===0).length;
   const al=[[n(4),"#5F5E5A","EET MISSING"],[n(7),"#5F5E5A","NO CURFEW"],[n(0),"#791F1F","OUTSIDE CURFEW"],[n(5),"#534AB7","EXT REQUIRED"],[n(6),"#3C3489","EXT REQUESTED"],[n(1),"#A32D2D","CRITICAL"],[n(2),"#BA7517","MONITOR"],[nr,"#3C3489","ROT SHORT"],[A.length,"#0F6E56","AIRBORNE"]].filter(a=>a[0]).map(a=>`<span class="cw-ac" style="background:${a[1]}">${a[0]} ${a[2]}</span>`).join("")||`<span class="cw-ac" style="background:#3B6D11">ALL OK</span>`;
-  return `<div class="cw-al">${al}</div><div class="cw-sec">ON GROUND · ${G.length}</div>${G.map(r=>cwRow(r.fl,r.c,SE)).join("")||'<p class="cw-note">No flights.</p>'}
+  return `<div class="cw-al">${al}<button class="btn" data-cwqa style="margin-left:auto;height:38px">+ Add flight</button></div><div class="cw-sec">ON GROUND · ${G.length}</div>${G.map(r=>cwRow(r.fl,r.c,SE)).join("")||'<p class="cw-note">No flights.</p>'}
   ${A.length?`<div class="cw-sec">AIRBORNE · ${A.length}</div>${A.map(r=>cwRow(r.fl,r.c,SE)).join("")}`:""}
   <p class="cw-note">Times in UTC. Results are not operationally validated — confirm against approved company procedures.</p>`}
 function cwRow(fl,c,SE){const ne=c.st[2]===4,nc=c.st[2]===7,id=fl.id,v=c.v,big=c.m==null?"—":cwHM(c.m);
@@ -550,7 +551,33 @@ function cwTable(SE){if(!cwDraft)cwDraft=clone(cwC());const D=cwDraft,O=cwC(),hl
   <button class="btn sec" data-cwfadd style="width:100%">+ Flight</button>
   ${cwMsg?`<p class="cw-note" style="color:#0F6E56;font-weight:600">✓ ${esc(cwMsg)}</p>`:""}
   <div class="bar" style="margin-top:12px"><button class="btn" data-cwsave>Save changes</button><button class="btn sec" data-cwcancel>Discard</button></div>`}
+function cwQuick(SE){const O=SE==="W"?"S":"W",f=(id,l,ph,extra="")=>`<div class="fld" style="margin:0"><label for="${id}">${l}</label><input id="${id}" placeholder="${ph}" ${extra}></div>`;
+  mbox.innerHTML=`<div class="mtop"><h3 id="mt">Add flight</h3><button class="mclose" id="mx" aria-label="Close">✕</button></div>
+  <p>Times in UTC · ${CWS[SE].n} schedule</p>
+  <div class="cwq">${f("q_cs","Flight","TAP1234",'autocapitalize="characters"')}${f("q_d","Destination","ORY",'autocapitalize="characters" maxlength="4"')}
+  ${f("q_in","Inbound flight","TAP1233",'autocapitalize="characters"')}${f("q_mtt","Min turn (min)","45",'inputmode="numeric" value="45"')}
+  ${f("q_std","STD","19:30",'inputmode="numeric"')}${f("q_sta","STA inbound","18:30",'inputmode="numeric"')}
+  ${f("q_ref","EET ref","02:05",'inputmode="numeric"')}</div>
+  <label class="chk"><input type="checkbox" id="q_both" checked> Same times in ${CWS[O].n}</label>
+  <div id="q_cf" class="cwq" hidden><p style="grid-column:1/-1;margin:4px 0 0">New airport — curfew (optional, UTC)</p>
+  ${f("q_cw","Curfew WINTER","22:30",'inputmode="numeric"')}${f("q_cs2","Curfew SUMMER","21:30",'inputmode="numeric"')}
+  ${f("q_xw","Extension WINTER","",'inputmode="numeric"')}${f("q_xs","Extension SUMMER","",'inputmode="numeric"')}</div>
+  <p class="err" id="q_err"></p>
+  <div class="bar" style="justify-content:flex-end"><button class="btn sec" data-close>Cancel</button><button class="btn" id="cwqsave">Add flight</button></div>`;
+  (document.body.style.overflow="hidden",mod.classList.add("on"));$("#q_cs").focus();
+  const chk=()=>{const v=($("#q_d").value||"").trim().toUpperCase();$("#q_cf").hidden=!(v.length>=3&&!cwC().ap[v])};$("#q_d").addEventListener("input",chk);
+  $("#cwqsave").onclick=()=>{const v=id=>($("#"+id).value||"").trim(),tm=id=>{const x=v(id);if(!x)return "";const t=cwT(x);return t==null?null:cwF(t)};
+    const cs=v("q_cs").toUpperCase().replace(/\s+/g,""),d=v("q_d").toUpperCase(),std=tm("q_std"),sta=tm("q_sta"),ref=tm("q_ref");
+    const er=m=>{$("#q_err").textContent=m};
+    if(!cs)return er("Enter the flight number.");if(!/^[A-Z]{3,4}$/.test(d))return er("Destination must be a 3-letter code.");
+    if(!std)return er("Enter a valid STD (HH:MM).");if(sta===null||ref===null)return er("Check the times (HH:MM).");
+    const D=clone(cwC());delete D.sample;D.rev40=1;const t={std,sta:sta||"",ref:ref||""};
+    const fl={id:"f"+Date.now().toString(36),cs,d,inb:v("q_in").toUpperCase().replace(/\s+/g,""),mtt:+v("q_mtt")||45,W:{std:"",sta:"",ref:""},S:{std:"",sta:"",ref:""}};
+    fl[SE]=t;if($("#q_both").checked)fl[O]=Object.assign({},t);D.fl.push(fl);
+    if(!D.ap[d]){const c=[tm("q_cw"),tm("q_cs2"),tm("q_xw"),tm("q_xs")];if(c.includes(null))return er("Check the curfew times (HH:MM).");D.ap[d]={W:c[0],S:c[1],WX:c[2],SX:c[3],src:"added "+new Date().toISOString().slice(0,10)}}
+    cfg.cw=D;saveCfg();closeM();renderDay();toast(cs+" added")}}
 function cwClick(e){const g=s=>e.target.closest(s);let x;
+  if(g("[data-cwqa]")){cwQuick(cwSeason());return true}
   if(x=g("[data-cwv]")){cwV=x.dataset.cwv;cwDraft=null;cwMsg="";renderDay();return true}
   if(x=g("[data-cwse]")){const k=x.dataset.cwse;cwSE=k==="auto"||k===cwAuto(sel)?null:k;cwOpen=null;renderDay();return true}
   if(x=g("[data-cwo]")){cwOpen=cwOpen===x.dataset.cwo?null:x.dataset.cwo;renderDay();return true}
@@ -921,7 +948,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="28";
+const APPV="29";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});

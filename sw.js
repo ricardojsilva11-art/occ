@@ -1,5 +1,5 @@
 // OCC Diário — funciona sem rede
-const V = "occ-v29";
+const V = "occ-v30";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest",
   "icon-180.png", "icon-192.png", "icon-512.png",
