@@ -289,6 +289,11 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .cw-ed{background:var(--card2);padding:12px;border-radius:12px;margin:6px 0 10px}
 .cw-eg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .cw-eg label{font-size:12px;color:var(--mute);font-weight:600}
+.cw-lt{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:12px;color:var(--mute);font-weight:600}
+.cw-lf>input{width:100%}
+.cw-ci{display:inline-flex;align-items:center;gap:5px;padding:1px 8px 1px 4px;border-radius:8px;border:1px solid var(--line);cursor:pointer;white-space:nowrap}
+.cw-ci input{margin:0!important;width:16px;height:16px;min-height:0;accent-color:#0F6E56}
+.cw-ci.on{border-color:#0F6E56;color:#fff;background:#0F6E56}
 .cw-eg input{margin-top:3px;font-family:"IBM Plex Mono",monospace;text-align:center}
 .cw-need{border:2px solid #5F5E5A!important}
 .cw-atd{border:2px solid #0F6E56!important}
@@ -540,11 +545,10 @@ function cwRow(fl,c,SE){const ne=c.st[2]===4,nc=c.st[2]===7,id=fl.id,v=c.v,big=c
     <div class="cw-eg"><label>Inbound flight<input data-cwi="${id}" autocapitalize="characters" value="${esc(v.inbd??fl.inb??"")}" placeholder="e.g. TAP441"></label>
     <label>ETA<input inputmode="numeric" data-cwf="${id}|ain" value="${esc(v.ain||"")}" placeholder="${v.inbd!=null&&v.inbd!==(fl.inb||"")?"hh:mm":"STA "+esc(c.s.sta||"—")}"></label></div></div>`}
   <div class="cw-grp"><div class="cw-gh">✈ ${esc(fl.cs)} departure</div><div class="cw-eg">
-  ${c.air?"":`<label>ETD today<input inputmode="numeric" data-cwf="${id}|etd" value="${esc(v.etd||"")}" placeholder="sched ${esc(c.s.std||"—")}"></label>`}<label style="${c.air?"grid-column:1/-1":""}">EET/TTOT<input class="${ne?"cw-need":""}" inputmode="numeric" data-cwf="${id}|eet" value="${esc(v.eet||"")}" placeholder="${c.s.ref?"ref "+esc(c.s.ref):"hh:mm"}"></label>
+  ${c.air?"":`<label>ETD today<input inputmode="numeric" data-cwf="${id}|etd" value="${esc(v.etd||"")}" placeholder="sched ${esc(c.s.std||"—")}"></label>`}<div class="cw-lf" style="${c.air?"grid-column:1/-1":""}"><div class="cw-lt"><label for="cwe-${id}">EET/TTOT</label><label class="cw-ci${v.hci?" on":""}"><input type="checkbox" data-cwh="${id}" ${v.hci?"checked":""}> High CI</label></div><input id="cwe-${id}" class="${ne?"cw-need":""}" inputmode="numeric" data-cwf="${id}|eet" value="${esc(v.eet||"")}" placeholder="${c.s.ref?"ref "+esc(c.s.ref):"hh:mm"}"></div>
   ${c.air?"":`<label>TSAT<input inputmode="numeric" data-cwf="${id}|ts" value="${esc(v.ts||"")}" placeholder="—"></label>
   <label>CTOT<input inputmode="numeric" data-cwf="${id}|ct" value="${esc(v.ct||"")}" placeholder="—"></label>`}
   <label style="${c.air?"grid-column:1/-1":""}">ATD${c.air?" · clear to undo":""}<input class="cw-atd" inputmode="numeric" data-cwf="${id}|atd" value="${esc(v.atd||"")}" placeholder="when airborne"></label>
-  <div class="cw-x${v.hci?" on":""}"><input type="checkbox" id="cwh-${id}" data-cwh="${id}" ${v.hci?"checked":""}><label for="cwh-${id}" class="cw-xl">Planned at high Cost Index</label></div>
   <div class="cw-x${v.xr?" on":""}"><input type="checkbox" id="cwx-${id}" data-cwx="${id}" ${v.xr?"checked":""}><label for="cwx-${id}" class="cw-xl">Extension requested</label>
   ${v.xr?`<input class="cw-xt2" inputmode="numeric" data-cwf="${id}|xt" value="${esc(v.xt||"")}" placeholder="hh:mm" aria-label="Extension until">`:""}</div>
   ${v.xr&&c.req==null?`<div class="cw-err">Enter the extension time.</div>`:""}</div></div></div>`:"")}
@@ -1027,7 +1031,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="37";
+const APPV="38";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
