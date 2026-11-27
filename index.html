@@ -453,15 +453,14 @@ function renderCal(){
 /* day panel */
 /* curfews */
 const CW_DEF={sample:1,
- ap:{ORY:{W:"22:30",S:"21:30",WX:"",SX:"",src:"FOOC 232 REV40 (26/10/25) · LDG até 2230/2130 · TJE/TJF/TJH/TON/TOO/TOP 2100/2000"},
-  BER:{W:"22:30",S:"21:30",WX:"23:00",SX:"22:00",src:"FOOC 232 REV40 (26/10/25) · atraso até 2300/2200 se sked antes · TJE/TJF/TJH 2100/2000 (atraso 2200/2100)"},
-  FRA:{W:"21:00",S:"20:00",WX:"23:00",SX:"22:00",src:"FOOC 232 REV40 (26/10/25) · atraso até 2300/2200 se slot planeado até 2100/2000"},
-  MUC:{W:"21:00",S:"20:00",WX:"23:00",SX:"22:00",src:"FOOC 232 REV40 (26/10/25) · extensão até 2300/2200 se sked antes 2230/2130"},
-  GVA:{W:"23:00",S:"22:00",WX:"23:29",SX:"22:29",src:"FOOC 232 REV40 (26/10/25) · LDG atrasado até 2329/2229 com PPR"},
-  LHR:{W:"23:30",S:"22:30",WX:"",SX:"",src:"FOOC 232 REV40 (26/10/25) · Night Quota Period 2330-0600 / 2230-0500"},
-  ZRH:{W:"22:00",S:"21:00",WX:"22:30",SX:"21:30",src:"FOOC 232 REV40 (26/10/25) · atrasados até 2230/2130 sem PPR"},
-  HAM:{W:"22:00",S:"21:00",WX:"23:00",SX:"22:00",src:"FOOC 232 REV40 (26/10/25) · atrasos até 2300/2200 se sked antes 2200/2100 · ALTN sem restrição"},
-  DUS:{W:"22:00",S:"21:00",WX:"22:30",SX:"21:30",src:"FOOC 232 REV40 (26/10/25) · LDG atrasado até 2230/2130 sem PPR · TKOF 2100/2000"}},
+ ap:{ORY:{W:"22:29",S:"21:29",WX:"",SX:"",src:"Excel Night Stops"},
+  BER:{W:"23:00",S:"23:00",WX:"",SX:"",src:"Excel Night Stops"},
+  FRA:{W:"23:00",S:"22:00",WX:"",SX:"",src:"Excel Night Stops"},
+  MUC:{W:"23:00",S:"22:00",WX:"",SX:"",src:"Excel Night Stops · P.EXT 22:29"},
+  GVA:{W:"23:00",S:"22:00",WX:"23:29",SX:"23:29",src:"Excel Night Stops · P.EXT 23:29"},
+  LHR:{W:"23:29",S:"22:30",WX:"",SX:"",src:"Excel Night Stops"},
+  ZRH:{W:"22:29",S:"21:30",WX:"",SX:"",src:"Excel Night Stops"},
+  HAM:{W:"23:00",S:"22:00",WX:"",SX:"",src:"Excel Night Stops"}},
  fl:[
   {id:"f1",cs:"TAP442",d:"ORY",inb:"TAP441",mtt:45,W:{std:"19:30",sta:"18:30",ref:"02:05"},S:{std:"19:29",sta:"18:29",ref:"02:01"}},
   {id:"f2",cs:"TAP456",d:"ORY",inb:"TAP455",mtt:45,W:{std:"19:05",sta:"18:05",ref:"01:49"},S:{std:"19:05",sta:"18:05",ref:""}},
@@ -479,8 +478,10 @@ let cwV="fl",cwOpen=null,cwSE=null,cwDraft=null,cwMsg="";
 const cwC=()=>cfg.cw||CW_DEF;
 function cwRev40(){if(!cfg.cw)return;let ch=false;
   if(!cfg.cw.rev40){["ORY","BER","FRA","MUC","GVA","LHR","ZRH"].forEach(k=>{cfg.cw.ap[k]=Object.assign({},CW_DEF.ap[k])});cfg.cw.rev40=1;ch=true}
-  if(!cfg.cw.ns41){["HAM","DUS"].forEach(k=>{if(!cfg.cw.ap[k])cfg.cw.ap[k]=Object.assign({},CW_DEF.ap[k])});
+  if(!cfg.cw.ns41){["HAM"].forEach(k=>{if(!cfg.cw.ap[k])cfg.cw.ap[k]=Object.assign({},CW_DEF.ap[k])});
     ["TAP440","TAP564"].forEach(cs=>{if(!cfg.cw.fl.some(f=>f.cs===cs)){const f=CW_DEF.fl.find(x=>x.cs===cs);cfg.cw.fl.push(clone(Object.assign({},f,{id:"f"+cs})))}});cfg.cw.ns41=1;ch=true}
+  if(!cfg.cw.xl42){["ORY","BER","FRA","MUC","GVA","LHR","ZRH","HAM"].forEach(k=>{cfg.cw.ap[k]=Object.assign({},CW_DEF.ap[k])});
+    if(cfg.cw.ap.DUS&&String(cfg.cw.ap.DUS.src||"").startsWith("FOOC"))delete cfg.cw.ap.DUS;cfg.cw.xl42=1;ch=true}
   if(ch)saveCfg()}
 const cwT=s=>{const m=String(s??"").replace(/\s/g,"").match(/^(\d{1,2}):?(\d{2})$/);return m&&+m[1]<24&&+m[2]<60?+m[1]*60+ +m[2]:null};
 const cwF=v=>{v=((v%1440)+1440)%1440;return p2(Math.floor(v/60))+":"+p2(v%60)};
@@ -959,7 +960,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="31";
+const APPV="32";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
