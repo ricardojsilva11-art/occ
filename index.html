@@ -363,7 +363,7 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 const ST=[{k:"M",n:"Manhã",h:["06:30","15:00"]},{k:"T",n:"Tarde",h:["14:45","23:15"]},{k:"N",n:"Noite",h:["23:00","07:00"]},{k:"F",n:"Folga"},{k:"V",n:"Férias"}];
 const SK=Object.fromEntries(ST.map(s=>[s.k,s]));
 const hoursOf=k=>SK[k]?.h?((cfg.hours&&cfg.hours[k])||SK[k].h).slice():null;
-const RDO=[{h:"SHIFT MANAGER",f:[["wx","WX/HLD"],["rgzfw","RGZFW"],["div","Diverted Flights"],["fuel","Fueled Aircraft"],["sys","System failures"],["smoth","Others"]]},{h:"ATC MANAGEMENT",f:[["fl","ATC FL Capping"],["atfcm","ATFCM Regulations"],["oth","Others"]]},{h:"LPPT",f:[["rwy","RWY in use","rwy"]]}];
+const RDO=[{h:"SHIFT MANAGER",f:[["wx","WX/HLD"],["rgzfw","RGZFW"],["div","Diverted Flights"],["fuel","Fueled Aircraft"],["sys","System failures"],["smoth","Others"]]},{h:"ATC MANAGEMENT",f:[["rwy","LPPT RWY in use","rwy"],["fl","ATC FL Capping"],["atfcm","ATFCM Regulations"],["oth","Others"]]}];
 const RWYS=["02","20"];
 const TPL=[
 {id:"ini",g:"Turno",t:"Início de turno",c:"#f59e0b",ic:"sun",i:["Briefing com DM cessante","Log OCC lido","Pendentes identificados","Frota / AOG / MEL revistos","Spares e reservas de tripulação","Meteo e NOTAM revistos","ATFM / slots verificados","Curfews em risco identificados"]},
@@ -1038,7 +1038,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="39";
+const APPV="40";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
