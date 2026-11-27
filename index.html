@@ -118,9 +118,21 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 @media(max-width:600px){.cpb2{grid-template-columns:minmax(0,1fr)}}
 .cp:hover{background:rgb(255 255 255/.24)}
 .cpbox{width:100%;min-height:220px;font:14px/1.5 "IBM Plex Mono",monospace;margin:8px 0 12px}
+.rtool{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;font-size:13px;color:var(--mute)}.rtool .pill{height:36px;font-size:13px;padding:0 12px}
+.rsec h3{cursor:pointer;user-select:none}
+.rsec h3{text-decoration:none}
+.rsec h3 .rtt{flex:1;text-decoration:underline;text-underline-offset:3px}
+.rch{display:inline-block;transition:transform .15s;transform:rotate(90deg);margin-inline-end:8px;opacity:.8}
+.rsec.col .rsec-h .rch,.rsec.col h3 .rch{transform:rotate(0)}
+.rcnt{font:500 12px "IBM Plex Mono",monospace;opacity:.75;text-decoration:none;margin-inline-end:6px}
+.rlab{display:flex;align-items:center;text-align:left;font-weight:700;font-size:14px;padding:11px 0 0;color:var(--ink)}
+.rf.fcol .rlab .rch{transform:rotate(0)}
+.rprev{text-align:left;min-height:40px;padding:8px 12px;border-radius:12px;background:var(--card2);border:1px dashed var(--line);font-size:14px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rprev.nil{color:var(--mute)}
 .rf{display:grid;grid-template-columns:170px minmax(0,1fr);align-items:start;gap:10px;padding:8px 12px;border-top:1px solid var(--line)}
 .rf:first-of-type{border-top:0}
 .rf label{font-weight:700;font-size:14px;padding-top:11px}
+@media(max-width:600px){.rlab{padding-top:2px}}
 .rf textarea{min-height:44px;resize:none;overflow:hidden}
 @media(max-width:600px){.rf{grid-template-columns:minmax(0,1fr);gap:4px}.rf label{padding-top:2px}}
 .fld{margin-bottom:12px}
@@ -570,7 +582,13 @@ function renderDay(){
     ${showEd&&s&&s.h?`<div class="hrs">Horário <input type="time" id="hs" value="${esc(d.start)}" aria-label="Início"> até <input type="time" id="he" value="${esc(d.end)}" aria-label="Fim"></div>`:""}</div>
   <div class="tabs" role="tablist"><button class="tab" role="tab" data-t="rep" aria-selected="${tab==="rep"}">RDO</button><button class="tab" role="tab" data-t="chk" aria-selected="${tab==="chk"}">Checklists<span>${nC}/${tC}</span></button><button class="tab" role="tab" data-t="cur" aria-selected="${tab==="cur"}">Curfews${(()=>{const b=cwBadge(d);return b?`<span style="background:#A32D2D;color:#fff">${b}</span>`:""})()}</button></div>
   <div class="pane" id="pane">${tab==="rep"?repPane(d):tab==="cur"?cwPane(d):chkPane(d)}</div>`}
-function repPane(d){return RDO.map((g,gi)=>`<div class="rsec"><h3><span>${g.h}</span><button class="cp" data-cp="${gi}">⧉ Copiar</button></h3>${g.f.map(([k,l])=>`<div class="rf"><label for="r-${k}">${l}</label><textarea id="r-${k}" data-rep="${k}" rows="1" placeholder="NIL">${esc(d.rep?.[k]||"")}</textarea></div>`).join("")}</div>`).join("")+
+let rcol={};try{rcol=JSON.parse(localStorage.getItem("occ-rc")||"{}")||{}}catch(_){}
+const saveRc=()=>{try{localStorage.setItem("occ-rc",JSON.stringify(rcol))}catch(_){}};
+function repPane(d){const val=k=>(d.rep?.[k]||"").trim();
+  return `<div class="rtool"><span>Mostrar:</span><button class="pill" data-rall="open">Tudo aberto</button><button class="pill" data-rall="filled">Só com texto</button><button class="pill" data-rall="close">Tudo fechado</button></div>`+
+  RDO.map((g,gi)=>{const sc=!!rcol["s"+gi],nf=g.f.filter(([k])=>val(k)).length;
+    return `<div class="rsec${sc?" col":""}"><h3 data-rsec="${gi}" role="button" tabindex="0" aria-expanded="${!sc}"><span class="rch">›</span><span class="rtt">${g.h}</span><small class="rcnt">${nf}/${g.f.length}</small><button class="cp" data-cp="${gi}">⧉ Copiar</button></h3>
+    ${sc?"":g.f.map(([k,l])=>{const fc=!!rcol[k],v=val(k);return `<div class="rf${fc?" fcol":""}"><button class="rlab" data-rfld="${k}" aria-expanded="${!fc}"><span class="rch">›</span>${l}</button>${fc?`<button class="rprev${v?"":" nil"}" data-rfld="${k}">${esc(v?v.split("\n")[0].slice(0,90):"NIL")}</button>`:`<textarea id="r-${k}" data-rep="${k}" rows="1" placeholder="NIL">${esc(d.rep?.[k]||"")}</textarea>`}</div>`}).join("")}</div>`}).join("")+
   (()=>{const at=attOf(d);return `<div class="attb"><div class="atth"><b>📎 Checklists no RDO</b><span>${at.length?at.length+" anexada(s) ao PDF":"Nenhuma anexada"}</span></div>
     <div class="atts">${allT().map(t=>{const on=at.includes(t.id),N=pts(t).length,n=doneOf(d,t);return `<button class="atc${on?" on":""}" data-att="${t.id}" style="--k:${t.c}" aria-pressed="${on}"><i>${on?"✓":"+"}</i>${esc(t.t)}<small>${n}/${N}</small></button>`}).join("")}</div>
     <p class="note" style="margin:8px 0 0">Toque para anexar ou retirar. As anexadas entram no “PDF do RDO”.</p></div>`})()+
@@ -626,6 +644,9 @@ dp.addEventListener("click",async e=>{
   const del=e.target.closest("[data-del]");if(del){const [tid,iid]=del.dataset.del.split("|");
     if(iid.startsWith("b")){cfg.hideIt=cfg.hideIt||{};(cfg.hideIt[tid]=cfg.hideIt[tid]||[]).push(iid)}else cfg.extra[tid]=(cfg.extra[tid]||[]).filter(x=>x.id!==iid);saveCfg();renderDay();renderCal();return}
   const sd=e.target.closest("[data-sdel]");if(sd){const [tid,iid,sid]=sd.dataset.sdel.split("|");cfg.subs[tid][iid]=cfg.subs[tid][iid].filter(x=>x.id!==sid);saveCfg();renderDay();renderCal();return}
+  const ra=e.target.closest("[data-rall]");if(ra){const m=ra.dataset.rall,d=getDay(sel);rcol={};RDO.forEach((g,gi)=>{if(m==="close")rcol["s"+gi]=1;g.f.forEach(([k])=>{if(m==="filled"&&!(d.rep?.[k]||"").trim())rcol[k]=1})});saveRc();renderDay();return}
+  const rsx=e.target.closest("[data-rsec]");if(rsx&&!e.target.closest(".cp")){const k="s"+rsx.dataset.rsec;rcol[k]=rcol[k]?0:1;saveRc();renderDay();return}
+  const rfx=e.target.closest("[data-rfld]");if(rfx){const k=rfx.dataset.rfld;rcol[k]=rcol[k]?0:1;saveRc();renderDay();if(!rcol[k])setTimeout(()=>{const t=document.getElementById("r-"+k);if(t){t.focus();t.selectionStart=t.value.length}},30);return}
   const at=e.target.closest("[data-att]");if(at){const tid=at.dataset.att;edit(sel,x=>{const a=attOf(x);x.att=a.includes(tid)?a.filter(y=>y!==tid):a.concat(tid)});renderDay();toast(attOf(getDay(sel)).includes(tid)?"Anexada ao RDO":"Retirada do RDO");return}
   const c=e.target.closest("[data-c]");if(c){togC(c.dataset.c);return}
   if(e.target.id==="copy")copyText(repText(getDay(sel)),"RDO completo");
@@ -895,7 +916,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="26";
+const APPV="27";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
