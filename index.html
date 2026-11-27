@@ -489,7 +489,7 @@ const cwHM=m=>(m<0?"−":"+")+Math.floor(Math.abs(m)/60)+"h"+p2(Math.abs(m)%60);
 const cwLastSun=(y,mo)=>{const d=new Date(Date.UTC(y,mo+1,0));d.setUTCDate(d.getUTCDate()-d.getUTCDay());return key(new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()))};
 const cwAuto=k=>{const y=+k.slice(0,4);return k>=cwLastSun(y,2)&&k<cwLastSun(y,9)?"S":"W"};
 const cwSeason=()=>cwSE||cwAuto(sel);
-function cwCalc(fl,dv,SE,C){const s=fl[SE]||{},v=dv||{},std=cwT(s.std);if(std==null)return null;
+function cwCalc(fl,dv,SE,C){const s=fl[SE]||{},v=dv||{},std=cwT(v.etd)??cwT(s.std);if(std==null)return null;
   const nx=x=>x==null?null:(x<std-720?x+1440:x);
   const ain=nx(cwT(v.ain)??cwT(s.sta)),mtt=+fl.mtt||0,turn=ain==null?null:std-ain,gap=turn==null?null:turn-mtt,dly=gap==null?0:Math.max(0,-gap);
   const rot=gap==null?null:gap<0?["#A32D2D","ROT SHORT −"+(-gap)+"′",0]:gap<=10?["#BA7517","ROT TIGHT +"+gap+"′",1]:["#3B6D11","ROT OK +"+gap+"′",2];
@@ -518,12 +518,12 @@ function cwPane(d){const SE=cwSeason(),S=CWS[SE],auto=!cwSE;
 function cwFlights(d,SE){const R=cwAll(d),G=R.filter(r=>!r.c.air).sort((a,b)=>a.c.k-b.c.k),A=R.filter(r=>r.c.air).sort((a,b)=>a.c.eta-b.c.eta);
   const n=k=>G.filter(r=>r.c.st[2]===k).length,nr=G.filter(r=>r.c.rot&&r.c.rot[2]===0).length;
   const al=[[n(4),"#5F5E5A","EET MISSING"],[n(7),"#5F5E5A","NO CURFEW"],[n(0),"#791F1F","OUTSIDE CURFEW"],[n(5),"#534AB7","EXT REQUIRED"],[n(6),"#3C3489","EXT REQUESTED"],[n(1),"#A32D2D","CRITICAL"],[n(2),"#BA7517","MONITOR"],[nr,"#3C3489","ROT SHORT"],[A.length,"#0F6E56","AIRBORNE"]].filter(a=>a[0]).map(a=>`<span class="cw-ac" style="background:${a[1]}">${a[0]} ${a[2]}</span>`).join("")||`<span class="cw-ac" style="background:#3B6D11">ALL OK</span>`;
-  return `<div class="cw-al">${al}<button class="btn" data-cwqa style="margin-left:auto;height:38px">+ Add flight</button></div><div class="cw-sec">ON GROUND · ${G.length}</div>${G.map(r=>cwRow(r.fl,r.c,SE)).join("")||'<p class="cw-note">No flights.</p>'}
+  return `<div class="cw-al">${al}<button class="btn sec" data-cwpaste style="margin-left:auto;height:38px">📋 Paste ETD/CTOT</button><button class="btn" data-cwqa style="height:38px">+ Add flight</button></div><div class="cw-sec">ON GROUND · ${G.length}</div>${G.map(r=>cwRow(r.fl,r.c,SE)).join("")||'<p class="cw-note">No flights.</p>'}
   ${A.length?`<div class="cw-sec">AIRBORNE · ${A.length}</div>${A.map(r=>cwRow(r.fl,r.c,SE)).join("")}`:""}
   <p class="cw-note">Times in UTC. Results are not operationally validated — confirm against approved company procedures.</p>`}
 function cwRow(fl,c,SE){const ne=c.st[2]===4,nc=c.st[2]===7,id=fl.id,v=c.v,big=c.m==null?"—":cwHM(c.m);
   return `<div class="cw-row${c.air?" cw-air":""}" data-cwo="${id}"><div class="cw-bar" style="background:${c.air?"#888780":c.st[0]}"></div>
-  <div><div class="cw-nm">${esc(fl.cs)} <span class="cw-sm">→ ${esc(fl.d)} · ETD ${esc(c.s.std)}</span>${c.air?` <span class="cw-pill" style="background:#0F6E56">ATD ${esc(v.atd)}</span>`:""}</div>
+  <div><div class="cw-nm">${esc(fl.cs)} <span class="cw-sm">→ ${esc(fl.d)} · ETD ${esc(c.v.etd||c.s.std)}${c.v.etd&&c.v.etd!==c.s.std?` <s style="opacity:.6">${esc(c.s.std||"")}</s>`:""}</span>${c.air?` <span class="cw-pill" style="background:#0F6E56">ATD ${esc(v.atd)}</span>`:""}</div>
   <div class="cw-sm">${c.air?"Airborne":"Departure "+cwF(c.w[0])+" ("+c.w[1]+")"} · EET ${ne?"<b style='color:var(--ink)'>tap to enter</b>":esc(v.eet||"—")} · ETA ${c.eta==null?"—":cwF(c.eta)} · curfew <b style="color:${CWS[SE].c}">${c.cf==null?"—":cwF(c.cf)}</b></div>
   <div class="cw-tags">${!c.air&&c.ain!=null?`<span class="cw-tag cw-ib">↩ ${esc(fl.inb||"Inbound")} ETA ${cwF(c.ain)}${cwT(v.ain)!=null&&cwT(c.s.sta)!=null&&cwT(v.ain)-cwT(c.s.sta)>0?" +"+(cwT(v.ain)-cwT(c.s.sta))+"′":""}</span>`:""}
   ${!c.air&&c.rot?`<span class="cw-tag" style="background:${c.rot[0]};color:#fff">${c.rot[1]}</span>`:""}
@@ -533,7 +533,7 @@ function cwRow(fl,c,SE){const ne=c.st[2]===4,nc=c.st[2]===7,id=fl.id,v=c.v,big=c
   ${c.mr!=null&&c.m<0?`<div style="font-size:11px;color:#3C3489;font-weight:600">${cwHM(c.mr)} to ext</div>`:c.st[2]===5?`<div style="font-size:11px;color:#534AB7;font-weight:600">${cwHM(c.mx)} to ext</div>`:""}</div></div>`+
   (cwOpen===id?`<div class="cw-ed">${!c.air&&c.turn!=null?`<div class="cw-sm" style="margin-bottom:8px">Turnaround ${c.turn}′ (min ${c.mtt}′) · ${c.gap<0?"delay required "+c.dly+"′ · new EOBT "+cwF(c.ain+c.mtt):"no delay · buffer "+c.gap+"′"}</div>`:""}
   ${nc?`<div class="cw-err" style="margin-bottom:8px">No curfew for ${esc(fl.d)} in ${CWS[SE].n}. Add it in Curfew table.</div>`:""}
-  <div class="cw-eg"><label style="grid-column:1/-1">EET (flight plan)<input class="${ne?"cw-need":""}" inputmode="numeric" data-cwf="${id}|eet" value="${esc(v.eet||"")}" placeholder="${c.s.ref?"ref "+esc(c.s.ref):"hh:mm"}"></label>
+  <div class="cw-eg">${c.air?"":`<label>ETD today<input inputmode="numeric" data-cwf="${id}|etd" value="${esc(v.etd||"")}" placeholder="sched ${esc(c.s.std||"—")}"></label>`}<label style="${c.air?"grid-column:1/-1":""}">EET (flight plan)<input class="${ne?"cw-need":""}" inputmode="numeric" data-cwf="${id}|eet" value="${esc(v.eet||"")}" placeholder="${c.s.ref?"ref "+esc(c.s.ref):"hh:mm"}"></label>
   ${c.air?"":`<label>ETA ${esc(fl.inb||"inbound")}<input inputmode="numeric" data-cwf="${id}|ain" value="${esc(v.ain||"")}" placeholder="STA ${esc(c.s.sta||"—")}"></label>
   <label>TSAT<input inputmode="numeric" data-cwf="${id}|ts" value="${esc(v.ts||"")}" placeholder="—"></label>
   <label>CTOT<input inputmode="numeric" data-cwf="${id}|ct" value="${esc(v.ct||"")}" placeholder="—"></label>`}
@@ -588,7 +588,33 @@ function cwQuick(SE){const O=SE==="W"?"S":"W",f=(id,l,ph,extra="")=>`<div class=
     fl[SE]=t;if($("#q_both").checked)fl[O]=Object.assign({},t);D.fl.push(fl);
     if(!D.ap[d]){const c=[tm("q_cw"),tm("q_cs2"),tm("q_xw"),tm("q_xs")];if(c.includes(null))return er("Check the curfew times (HH:MM).");D.ap[d]={W:c[0],S:c[1],WX:c[2],SX:c[3],src:"added "+new Date().toISOString().slice(0,10)}}
     cfg.cw=D;saveCfg();closeM();renderDay();toast(cs+" added")}}
+function cwParse(txt){const C=cwC(),num=x=>String(x).replace(/\D/g,"").replace(/^0+/,"");
+  const byN={};C.fl.forEach(f=>{byN[num(f.cs)]=f});
+  const tm=x=>{const m=String(x).match(/^(\d{1,2})[:.h]?(\d{2})z?$/i);if(!m)return null;const h=+m[1],mi=+m[2];return h<24&&mi<60?p2(h)+":"+p2(mi):null};
+  const lines=String(txt).replace(/\r/g,"").split("\n");const out={},unk=new Set();let cur=null;
+  const FRE=/\b(?:TAP|TP)\s?-?0*(\d{1,4})\b/i;
+  lines.forEach(raw=>{let L=raw.replace(/\t/g," ");const fm=L.match(FRE);
+    if(fm){const f=byN[num(fm[1])];if(f){cur={f,et:null,ct:null,ts:null,free:[],lab:false};out[f.id]=cur}else{unk.add(fm[0].toUpperCase().replace(/\s|-/g,""));cur=null}L=L.replace(fm[0]," ")}
+    if(!cur)return;
+    const lab=(re,k)=>{const m=L.match(re);if(m){const t=tm(m[1]);if(t){cur[k]=t;cur.lab=true;L=L.replace(m[0]," ")}}};
+    lab(/\b(?:CTOT|SLOT|CTO|CTL)\b\s*[:=-]?\s*(\d{1,2}[:.h]?\d{2}z?)/i,"ct");
+    lab(/\b(?:TSAT)\b\s*[:=-]?\s*(\d{1,2}[:.h]?\d{2}z?)/i,"ts");
+    lab(/\b(?:ETD|EOBT|OBT|STD|SOBT|ETOT)\b\s*[:=-]?\s*(\d{1,2}[:.h]?\d{2}z?)/i,"et");
+    L.replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g," ").split(/[^0-9:.hzZ]+/).forEach(w=>{if(/^\d{3,4}$|^\d{1,2}[:.h]\d{2}z?$/i.test(w)){const t=tm(w);if(t)cur.free.push(t)}})});
+  return {rows:Object.values(out).map(r=>{if(!r.et&&r.free.length)r.et=r.free.shift(),r.guess=true;if(!r.ct&&r.free.length)r.ct=r.free.shift(),r.guess=true;return r}).filter(r=>r.et||r.ct||r.ts),unk:[...unk]}}
+function cwPaste(){mbox.innerHTML=`<div class="mtop"><h3 id="mt">Paste ETD / CTOT</h3><button class="mclose" id="mx" aria-label="Close">✕</button></div>
+  <p>Copy the flights from your system (list, table or NOTAM/slot message) and paste here. Flights in the table are recognised by number (TP442, TAP442…). Times in UTC.</p>
+  <textarea id="cwpt" rows="7" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:14px" placeholder="TP442  ETD 1945  CTOT 2010&#10;TAP574 1830 1855"></textarea>
+  <div class="bar" style="justify-content:flex-end"><button class="btn sec" data-close>Cancel</button><button class="btn" id="cwpread">Read</button></div><div id="cwpres"></div>`;
+  (document.body.style.overflow="hidden",mod.classList.add("on"));setTimeout(()=>$("#cwpt").focus(),50);
+  $("#cwpread").onclick=()=>{const r=cwParse($("#cwpt").value);const cur=getDay(sel).cw||{};
+    $("#cwpres").innerHTML=r.rows.length?`<div class="prev">${r.rows.map(x=>{const o=cur[x.f.id]||{};return `<label class="pr"><input type="checkbox" data-cwpr="${x.f.id}" checked style="width:20px;height:20px;min-height:0"><span class="d"><b>${esc(x.f.cs)}</b> → ${esc(x.f.d)}</span><span class="mono">${x.et?"ETD "+x.et:""}${x.ct?" · CTOT "+x.ct:""}${x.ts?" · TSAT "+x.ts:""}</span>${x.guess?'<small class="cw-warn">no label — check</small>':""}${(o.etd||o.ct)?`<small style="color:var(--mute)">now ${esc(o.etd||"—")}/${esc(o.ct||"—")}</small>`:""}</label>`}).join("")}</div>
+      ${r.unk.length?`<p class="err">Not in the table: ${esc(r.unk.join(", "))} — add them with “+ Add flight”.</p>`:""}
+      <div class="bar" style="justify-content:flex-end"><button class="btn" id="cwpapply">Apply ${r.rows.length}</button></div>`
+      :`<p class="err">No flights from the table found in the text.${r.unk.length?" Found but not in the table: "+esc(r.unk.join(", ")):""}</p>`;
+    const ap=$("#cwpapply");if(ap)ap.onclick=()=>{let n=0;edit(sel,d=>{d.cw=d.cw||{};r.rows.forEach(x=>{const cb=document.querySelector(`[data-cwpr="${x.f.id}"]`);if(!cb||!cb.checked)return;const v=Object.assign({},d.cw[x.f.id]);if(x.et)v.etd=x.et;if(x.ct)v.ct=x.ct;if(x.ts)v.ts=x.ts;d.cw[x.f.id]=v;n++})});closeM();renderDay();toast(n+" flight(s) updated")}}}
 function cwClick(e){const g=s=>e.target.closest(s);let x;
+  if(g("[data-cwpaste]")){cwPaste();return true}
   if(g("[data-cwqa]")){cwQuick(cwSeason());return true}
   if(x=g("[data-cwv]")){cwV=x.dataset.cwv;cwDraft=null;cwMsg="";renderDay();return true}
   if(x=g("[data-cwse]")){const k=x.dataset.cwse;cwSE=k==="auto"||k===cwAuto(sel)?null:k;cwOpen=null;renderDay();return true}
@@ -960,7 +986,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="32";
+const APPV="33";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
