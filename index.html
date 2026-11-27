@@ -529,6 +529,7 @@ function cwRow(fl,c,SE){const ne=c.st[2]===4,nc=c.st[2]===7,id=fl.id,v=c.v,big=c
   <div class="cw-sm">${c.air?"Airborne":"Departure "+cwF(c.w[0])+" ("+c.w[1]+")"} · EET ${ne?"<b style='color:var(--ink)'>tap to enter</b>":esc(v.eet||"—")} · ETA ${c.eta==null?"—":cwF(c.eta)} · curfew <b style="color:${CWS[SE].c}">${c.cf==null?"—":cwF(c.cf)}</b></div>
   <div class="cw-tags">${!c.air&&c.ain!=null?`<span class="cw-tag cw-ib">↩ ${esc((v.inbd??fl.inb)||"Inbound")} ETA ${cwF(c.ain)}${cwT(v.ain)!=null&&cwT(c.s.sta)!=null&&v.inbd==null&&cwT(v.ain)-cwT(c.s.sta)>0?" +"+(cwT(v.ain)-cwT(c.s.sta))+"′":""}</span>`:""}
   ${!c.air&&c.rot?`<span class="cw-tag" style="background:${c.rot[0]};color:#fff">${c.rot[1]}</span>`:""}
+  ${v.hci?`<span class="cw-tag" style="background:#0F6E56;color:#fff">HIGH CI</span>`:""}
   ${c.req!=null?`<span class="cw-tag" style="background:#3C3489;color:#fff">✓ Ext requested until ${cwF(c.req)}</span>`:v.xr?`<span class="cw-tag" style="background:#A32D2D;color:#fff">Ext requested · time missing</span>`:c.ext!=null?`<span class="cw-tag cw-xt">Ext until ${cwF(c.ext)}</span>`:""}
   ${!c.air&&c.lat!=null?`<span class="cw-sm">Latest dep ${cwF(c.lat)}${c.latx!=null?" · with ext "+cwF(c.latx):""}</span>`:""}</div></div>
   <div style="text-align:right"><span class="cw-pill" style="background:${c.st[0]}">${c.st[1]}</span><div class="mono" style="font-size:15px;font-weight:600;margin-top:4px;color:${c.st[0]}">${big}</div>
@@ -539,10 +540,11 @@ function cwRow(fl,c,SE){const ne=c.st[2]===4,nc=c.st[2]===7,id=fl.id,v=c.v,big=c
     <div class="cw-eg"><label>Inbound flight<input data-cwi="${id}" autocapitalize="characters" value="${esc(v.inbd??fl.inb??"")}" placeholder="e.g. TAP441"></label>
     <label>ETA<input inputmode="numeric" data-cwf="${id}|ain" value="${esc(v.ain||"")}" placeholder="${v.inbd!=null&&v.inbd!==(fl.inb||"")?"hh:mm":"STA "+esc(c.s.sta||"—")}"></label></div></div>`}
   <div class="cw-grp"><div class="cw-gh">✈ ${esc(fl.cs)} departure</div><div class="cw-eg">
-  ${c.air?"":`<label>ETD today<input inputmode="numeric" data-cwf="${id}|etd" value="${esc(v.etd||"")}" placeholder="sched ${esc(c.s.std||"—")}"></label>`}<label style="${c.air?"grid-column:1/-1":""}">EET (flight plan)<input class="${ne?"cw-need":""}" inputmode="numeric" data-cwf="${id}|eet" value="${esc(v.eet||"")}" placeholder="${c.s.ref?"ref "+esc(c.s.ref):"hh:mm"}"></label>
+  ${c.air?"":`<label>ETD today<input inputmode="numeric" data-cwf="${id}|etd" value="${esc(v.etd||"")}" placeholder="sched ${esc(c.s.std||"—")}"></label>`}<label style="${c.air?"grid-column:1/-1":""}">EET/TTOT<input class="${ne?"cw-need":""}" inputmode="numeric" data-cwf="${id}|eet" value="${esc(v.eet||"")}" placeholder="${c.s.ref?"ref "+esc(c.s.ref):"hh:mm"}"></label>
   ${c.air?"":`<label>TSAT<input inputmode="numeric" data-cwf="${id}|ts" value="${esc(v.ts||"")}" placeholder="—"></label>
   <label>CTOT<input inputmode="numeric" data-cwf="${id}|ct" value="${esc(v.ct||"")}" placeholder="—"></label>`}
   <label style="${c.air?"grid-column:1/-1":""}">ATD${c.air?" · clear to undo":""}<input class="cw-atd" inputmode="numeric" data-cwf="${id}|atd" value="${esc(v.atd||"")}" placeholder="when airborne"></label>
+  <div class="cw-x${v.hci?" on":""}"><input type="checkbox" id="cwh-${id}" data-cwh="${id}" ${v.hci?"checked":""}><label for="cwh-${id}" class="cw-xl">Planned at high Cost Index</label></div>
   <div class="cw-x${v.xr?" on":""}"><input type="checkbox" id="cwx-${id}" data-cwx="${id}" ${v.xr?"checked":""}><label for="cwx-${id}" class="cw-xl">Extension requested</label>
   ${v.xr?`<input class="cw-xt2" inputmode="numeric" data-cwf="${id}|xt" value="${esc(v.xt||"")}" placeholder="hh:mm" aria-label="Extension until">`:""}</div>
   ${v.xr&&c.req==null?`<div class="cw-err">Enter the extension time.</div>`:""}</div></div></div>`:"")}
@@ -674,6 +676,7 @@ function cwChange(e){const t=e.target,v=(t.value||"").trim();let x;
     edit(sel,d=>{d.cw=d.cw||{};d.cw[id]=Object.assign({},d.cw[id],{[f]:val})});if(f==="atd")cwOpen=null;renderDay();return true}
   if(x=t.dataset.cwi){const val=v.toUpperCase().replace(/\s+/g,"");edit(sel,d=>{d.cw=d.cw||{};const o=Object.assign({},d.cw[x]);const fl=cwC().fl.find(f=>f.id===x);
       if(fl&&val===(fl.inb||""))delete o.inbd;else o.inbd=val;if((o.inbd??null)!==(d.cw[x]?.inbd??null))delete o.ain;d.cw[x]=o});renderDay();return true}
+  if(x=t.dataset.cwh){edit(sel,d=>{d.cw=d.cw||{};d.cw[x]=Object.assign({},d.cw[x],{hci:t.checked})});renderDay();return true}
   if(x=t.dataset.cwx){edit(sel,d=>{d.cw=d.cw||{};d.cw[x]=Object.assign({},d.cw[x],{xr:t.checked})});renderDay();return true}
   if(x=t.dataset.cwa){const [ap,f]=x.split("|");let val="";if(v){const m=cwT(v);if(m==null){toast("Invalid time — use hhmm");renderDay();return true}val=cwF(m)}cwDraft.ap[ap][f]=val;renderDay();return true}
   if(x=t.dataset.cwl){const [id,k]=x.split("|"),[a,b]=k.split("."),fl=cwDraft.fl.find(f=>f.id===id);if(!fl)return true;
@@ -1024,7 +1027,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="36";
+const APPV="37";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
