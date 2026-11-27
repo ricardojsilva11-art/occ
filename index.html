@@ -459,7 +459,9 @@ const CW_DEF={sample:1,
   MUC:{W:"21:00",S:"20:00",WX:"23:00",SX:"22:00",src:"FOOC 232 REV40 (26/10/25) · extensão até 2300/2200 se sked antes 2230/2130"},
   GVA:{W:"23:00",S:"22:00",WX:"23:29",SX:"22:29",src:"FOOC 232 REV40 (26/10/25) · LDG atrasado até 2329/2229 com PPR"},
   LHR:{W:"23:30",S:"22:30",WX:"",SX:"",src:"FOOC 232 REV40 (26/10/25) · Night Quota Period 2330-0600 / 2230-0500"},
-  ZRH:{W:"22:00",S:"21:00",WX:"22:30",SX:"21:30",src:"FOOC 232 REV40 (26/10/25) · atrasados até 2230/2130 sem PPR"}},
+  ZRH:{W:"22:00",S:"21:00",WX:"22:30",SX:"21:30",src:"FOOC 232 REV40 (26/10/25) · atrasados até 2230/2130 sem PPR"},
+  HAM:{W:"22:00",S:"21:00",WX:"23:00",SX:"22:00",src:"FOOC 232 REV40 (26/10/25) · atrasos até 2300/2200 se sked antes 2200/2100 · ALTN sem restrição"},
+  DUS:{W:"22:00",S:"21:00",WX:"22:30",SX:"21:30",src:"FOOC 232 REV40 (26/10/25) · LDG atrasado até 2230/2130 sem PPR · TKOF 2100/2000"}},
  fl:[
   {id:"f1",cs:"TAP442",d:"ORY",inb:"TAP441",mtt:45,W:{std:"19:30",sta:"18:30",ref:"02:05"},S:{std:"19:29",sta:"18:29",ref:"02:01"}},
   {id:"f2",cs:"TAP456",d:"ORY",inb:"TAP455",mtt:45,W:{std:"19:05",sta:"18:05",ref:"01:49"},S:{std:"19:05",sta:"18:05",ref:""}},
@@ -469,11 +471,17 @@ const CW_DEF={sample:1,
   {id:"f6",cs:"TAP944",d:"GVA",inb:"TAP943",mtt:45,W:{std:"19:40",sta:"18:40",ref:""},S:{std:"19:00",sta:"18:00",ref:"01:55"}},
   {id:"f7",cs:"TAP1358",d:"LHR",inb:"TAP1357",mtt:45,W:{std:"18:45",sta:"17:45",ref:""},S:{std:"18:35",sta:"17:35",ref:""}},
   {id:"f8",cs:"TAP1366",d:"LHR",inb:"TAP1365",mtt:45,W:{std:"19:50",sta:"18:50",ref:""},S:{std:"19:10",sta:"18:10",ref:"02:11"}},
+  {id:"f10",cs:"TAP440",d:"ORY",inb:"",mtt:45,W:{std:"",sta:"",ref:""},S:{std:"18:35",sta:"",ref:""}},
+  {id:"f11",cs:"TAP564",d:"HAM",inb:"",mtt:45,W:{std:"18:05",sta:"",ref:""},S:{std:"16:45",sta:"",ref:""}},
   {id:"f9",cs:"TAP934",d:"ZRH",inb:"TAP933",mtt:45,W:{std:"18:40",sta:"17:40",ref:""},S:{std:"17:40",sta:"16:40",ref:"02:10"}}]};
 const CWS={W:{c:"#185FA5",n:"WINTER"},S:{c:"#BA7517",n:"SUMMER"}};
 let cwV="fl",cwOpen=null,cwSE=null,cwDraft=null,cwMsg="";
 const cwC=()=>cfg.cw||CW_DEF;
-function cwRev40(){if(!cfg.cw||cfg.cw.rev40)return;Object.entries(CW_DEF.ap).forEach(([k,v])=>{cfg.cw.ap[k]=Object.assign({},v)});cfg.cw.rev40=1;saveCfg()}
+function cwRev40(){if(!cfg.cw)return;let ch=false;
+  if(!cfg.cw.rev40){["ORY","BER","FRA","MUC","GVA","LHR","ZRH"].forEach(k=>{cfg.cw.ap[k]=Object.assign({},CW_DEF.ap[k])});cfg.cw.rev40=1;ch=true}
+  if(!cfg.cw.ns41){["HAM","DUS"].forEach(k=>{if(!cfg.cw.ap[k])cfg.cw.ap[k]=Object.assign({},CW_DEF.ap[k])});
+    ["TAP440","TAP564"].forEach(cs=>{if(!cfg.cw.fl.some(f=>f.cs===cs)){const f=CW_DEF.fl.find(x=>x.cs===cs);cfg.cw.fl.push(clone(Object.assign({},f,{id:"f"+cs})))}});cfg.cw.ns41=1;ch=true}
+  if(ch)saveCfg()}
 const cwT=s=>{const m=String(s??"").replace(/\s/g,"").match(/^(\d{1,2}):?(\d{2})$/);return m&&+m[1]<24&&+m[2]<60?+m[1]*60+ +m[2]:null};
 const cwF=v=>{v=((v%1440)+1440)%1440;return p2(Math.floor(v/60))+":"+p2(v%60)};
 const cwHM=m=>(m<0?"−":"+")+Math.floor(Math.abs(m)/60)+"h"+p2(Math.abs(m)%60);
@@ -951,7 +959,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="30";
+const APPV="31";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
