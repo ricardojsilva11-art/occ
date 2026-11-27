@@ -114,10 +114,14 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 .atc small{font:500 12px "IBM Plex Mono",monospace;color:var(--mute)}
 .atc.on{border-color:var(--k);background:color-mix(in srgb,var(--k) 12%,var(--card))}.atc.on i{background:var(--k);color:#fff}
 .tatt{position:absolute;top:12px;right:12px;font-size:18px}
-.cpb2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:4px 0 8px}.cpb2 .btn{height:52px;font-size:15px}
+.cpb2{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:4px 0 8px}.cpb2 .btn{height:52px;font-size:15px}
 @media(max-width:600px){.cpb2{grid-template-columns:minmax(0,1fr)}}
 .cp:hover{background:rgb(255 255 255/.24)}
 .cpbox{width:100%;min-height:220px;font:14px/1.5 "IBM Plex Mono",monospace;margin:8px 0 12px}
+.rwys{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:4px 0}
+.rwyb{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 18px 0 10px;border-radius:12px;background:var(--card2);border:2px solid var(--line);font:700 17px "IBM Plex Mono",monospace;color:var(--ink)}
+.rwyb i{width:24px;height:24px;border-radius:7px;border:2px solid var(--mute);display:grid;place-items:center;font-style:normal;font-size:14px}
+.rwyb.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 15%,var(--card))}.rwyb.on i{background:var(--acc);border-color:var(--acc);color:#fff}
 .rtool{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;font-size:13px;color:var(--mute)}.rtool .pill{height:36px;font-size:13px;padding:0 12px}
 .rsec h3{cursor:pointer;user-select:none}
 .rsec h3{text-decoration:none}
@@ -359,7 +363,8 @@ textarea{resize:vertical;min-height:72px;line-height:1.45}
 const ST=[{k:"M",n:"Manhã",h:["06:30","15:00"]},{k:"T",n:"Tarde",h:["14:45","23:15"]},{k:"N",n:"Noite",h:["23:00","07:00"]},{k:"F",n:"Folga"},{k:"V",n:"Férias"}];
 const SK=Object.fromEntries(ST.map(s=>[s.k,s]));
 const hoursOf=k=>SK[k]?.h?((cfg.hours&&cfg.hours[k])||SK[k].h).slice():null;
-const RDO=[{h:"SHIFT MANAGER",f:[["wx","WX/HLD"],["rgzfw","RGZFW"],["div","Diverted Flights"],["fuel","Fueled Aircraft"],["sys","System failures"],["smoth","Others"]]},{h:"ATC MANAGEMENT",f:[["fl","ATC FL Capping"],["atfcm","ATFCM Regulations"],["oth","Others"]]}];
+const RDO=[{h:"SHIFT MANAGER",f:[["wx","WX/HLD"],["rgzfw","RGZFW"],["div","Diverted Flights"],["fuel","Fueled Aircraft"],["sys","System failures"],["smoth","Others"]]},{h:"ATC MANAGEMENT",f:[["fl","ATC FL Capping"],["atfcm","ATFCM Regulations"],["oth","Others"]]},{h:"LPPT",f:[["rwy","RWY in use","rwy"]]}];
+const RWYS=["02","20"];
 const TPL=[
 {id:"ini",g:"Turno",t:"Início de turno",c:"#f59e0b",ic:"sun",i:["Briefing com DM cessante","Log OCC lido","Pendentes identificados","Frota / AOG / MEL revistos","Spares e reservas de tripulação","Meteo e NOTAM revistos","ATFM / slots verificados","Curfews em risco identificados"]},
 {id:"rot",g:"Turno",t:"Rotina horária",c:"#0ea5e9",ic:"clock",i:["Atrasos / OTP","CTOT vs EOBT","Flight watch","Margens FTL","Log OCC atualizado"]},
@@ -703,7 +708,8 @@ function repPane(d){const val=k=>(d.rep?.[k]||"").trim();
   return `<div class="rtool"><span>Mostrar:</span><button class="pill" data-rall="open">Tudo aberto</button><button class="pill" data-rall="filled">Só com texto</button><button class="pill" data-rall="close">Tudo fechado</button></div>`+
   RDO.map((g,gi)=>{const sc=!!rcol["s"+gi],nf=g.f.filter(([k])=>val(k)).length;
     return `<div class="rsec${sc?" col":""}"><h3 data-rsec="${gi}" role="button" tabindex="0" aria-expanded="${!sc}"><span class="rch">›</span><span class="rtt">${g.h}</span><small class="rcnt">${nf}/${g.f.length}</small><button class="cp" data-cp="${gi}">⧉ Copiar</button></h3>
-    ${sc?"":g.f.map(([k,l])=>{const fc=!!rcol[k],v=val(k);return `<div class="rf${fc?" fcol":""}"><button class="rlab" data-rfld="${k}" aria-expanded="${!fc}"><span class="rch">›</span>${l}</button>${fc?`<button class="rprev${v?"":" nil"}" data-rfld="${k}">${esc(v?v.split("\n")[0].slice(0,90):"NIL")}</button>`:`<textarea id="r-${k}" data-rep="${k}" rows="1" placeholder="NIL">${esc(d.rep?.[k]||"")}</textarea>`}</div>`}).join("")}</div>`}).join("")+
+    ${sc?"":g.f.map(([k,l,ty])=>{if(ty==="rwy"){const v=val(k);return `<div class="rf"><span class="rlab" style="cursor:default">${l}</span><div class="rwys">${RWYS.map(r=>`<button class="rwyb${v===r?" on":""}" data-rwy="${k}|${r}" aria-pressed="${v===r}"><i>${v===r?"✓":""}</i>RWY ${r}</button>`).join("")}</div></div>`}
+      const fc=!!rcol[k],v=val(k);return `<div class="rf${fc?" fcol":""}"><button class="rlab" data-rfld="${k}" aria-expanded="${!fc}"><span class="rch">›</span>${l}</button>${fc?`<button class="rprev${v?"":" nil"}" data-rfld="${k}">${esc(v?v.split("\n")[0].slice(0,90):"NIL")}</button>`:`<textarea id="r-${k}" data-rep="${k}" rows="1" placeholder="NIL">${esc(d.rep?.[k]||"")}</textarea>`}</div>`}).join("")}</div>`}).join("")+
   (()=>{const at=attOf(d);return `<div class="attb"><div class="atth"><b>📎 Checklists no RDO</b><span>${at.length?at.length+" anexada(s) ao PDF":"Nenhuma anexada"}</span></div>
     <div class="atts">${allT().map(t=>{const on=at.includes(t.id),N=pts(t).length,n=doneOf(d,t);return `<button class="atc${on?" on":""}" data-att="${t.id}" style="--k:${t.c}" aria-pressed="${on}"><i>${on?"✓":"+"}</i>${esc(t.t)}<small>${n}/${N}</small></button>`}).join("")}</div>
     <p class="note" style="margin:8px 0 0">Toque para anexar ou retirar. As anexadas entram no “PDF do RDO”.</p></div>`})()+
@@ -759,6 +765,7 @@ dp.addEventListener("click",async e=>{
   const del=e.target.closest("[data-del]");if(del){const [tid,iid]=del.dataset.del.split("|");
     if(iid.startsWith("b")){cfg.hideIt=cfg.hideIt||{};(cfg.hideIt[tid]=cfg.hideIt[tid]||[]).push(iid)}else cfg.extra[tid]=(cfg.extra[tid]||[]).filter(x=>x.id!==iid);saveCfg();renderDay();renderCal();return}
   const sd=e.target.closest("[data-sdel]");if(sd){const [tid,iid,sid]=sd.dataset.sdel.split("|");cfg.subs[tid][iid]=cfg.subs[tid][iid].filter(x=>x.id!==sid);saveCfg();renderDay();renderCal();return}
+  const rw=e.target.closest("[data-rwy]");if(rw){const [k,r]=rw.dataset.rwy.split("|");edit(sel,d=>{d.rep=d.rep||{};d.rep[k]=d.rep[k]===r?"":r});renderDay();renderCal();return}
   const ra=e.target.closest("[data-rall]");if(ra){const m=ra.dataset.rall,d=getDay(sel);rcol={};RDO.forEach((g,gi)=>{if(m==="close")rcol["s"+gi]=1;g.f.forEach(([k])=>{if(m==="filled"&&!(d.rep?.[k]||"").trim())rcol[k]=1})});saveRc();renderDay();return}
   const rsx=e.target.closest("[data-rsec]");if(rsx&&!e.target.closest(".cp")){const k="s"+rsx.dataset.rsec;rcol[k]=rcol[k]?0:1;saveRc();renderDay();return}
   const rfx=e.target.closest("[data-rfld]");if(rfx){const k=rfx.dataset.rfld;rcol[k]=rcol[k]?0:1;saveRc();renderDay();if(!rcol[k])setTimeout(()=>{const t=document.getElementById("r-"+k);if(t){t.focus();t.selectionStart=t.value.length}},30);return}
@@ -787,7 +794,7 @@ dp.addEventListener("input",e=>{const t=e.target;
 
   else if(t.id==="hs"||t.id==="he"){edit(sel,d=>{d[t.id==="hs"?"start":"end"]=t.value},700);const sub=$("#dsub");const d=getDay(sel);if(sub)sub.textContent=`${d.start}–${d.end}`}});
 function markSaved(){const s=$("#saved");if(s)s.textContent="Guardado "+new Date().toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"})}
-const secText=(d,g)=>[g.h].concat(g.f.map(([k,l])=>`${l}: ${(d.rep?.[k]||"").trim()||"NIL"}`)).join("\n");
+const secText=(d,g)=>[g.h].concat(g.f.map(([k,l,ty])=>{const v=(d.rep?.[k]||"").trim();return `${l}: ${v||"NIL"}`})).join("\n");
 function repText(d){return RDO.map(g=>secText(d,g)).join("\n\n")}
 async function copyText(t,label){let ok=false;
   try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
@@ -1031,7 +1038,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="38";
+const APPV="39";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
@@ -1043,7 +1050,7 @@ async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){to
   y=40;doc.setTextColor(13,27,42);
   const page=h=>{if(y+h>282){doc.addPage();y=18}};
   RDO.forEach(g=>{page(18);doc.setFillColor(15,27,41);doc.roundedRect(M,y,CW,9,1.5,1.5,"F");doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(11);doc.text(g.h,M+4,y+6.2);y+=13;doc.setTextColor(13,27,42);
-    g.f.forEach(([k,l])=>{const v=(d.rep?.[k]||"").trim()||"NIL";doc.setFontSize(10);doc.setFont("helvetica","normal");const lines=doc.splitTextToSize(v,CW-8);const bh=Math.max(12,lines.length*5+6);page(bh+9);
+    g.f.forEach(([k,l,ty])=>{const v0=(d.rep?.[k]||"").trim(),v=v0?(ty==="rwy"?"RWY "+v0:v0):"NIL";doc.setFontSize(10);doc.setFont("helvetica","normal");const lines=doc.splitTextToSize(v,CW-8);const bh=Math.max(12,lines.length*5+6);page(bh+9);
       doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(13,27,42);doc.text(l,M,y+4);y+=6;
       doc.setDrawColor(190,200,212);doc.setFillColor(247,249,251);doc.roundedRect(M,y,CW,bh,1.5,1.5,"FD");
       doc.setFont("helvetica","normal");doc.setTextColor(v==="NIL"?130:13,v==="NIL"?140:27,v==="NIL"?150:42);doc.text(lines,M+4,y+6);doc.setTextColor(13,27,42);y+=bh+5});y+=4});
