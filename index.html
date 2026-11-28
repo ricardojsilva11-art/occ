@@ -794,10 +794,19 @@ dp.addEventListener("input",e=>{const t=e.target;
 
   else if(t.id==="hs"||t.id==="he"){edit(sel,d=>{d[t.id==="hs"?"start":"end"]=t.value},700);const sub=$("#dsub");const d=getDay(sel);if(sub)sub.textContent=`${d.start}–${d.end}`}});
 function markSaved(){const s=$("#saved");if(s)s.textContent="Guardado "+new Date().toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"})}
-const secText=(d,g)=>[g.h].concat(g.f.map(([k,l,ty])=>{const v=(d.rep?.[k]||"").trim();return `${l}: ${v||"NIL"}`})).join("\n");
-function repText(d){return RDO.map(g=>secText(d,g)).join("\n\n")}
-async function copyText(t,label){let ok=false;
-  try{await navigator.clipboard.writeText(t);ok=true}catch(e){}
+/* formato do relatório: "LPPT RWY in use: 02" numa linha; restantes campos com o título (a negrito) numa linha e o texto por baixo, linha em branco entre campos */
+function secRich(d,g,withHead){const P=[],H=[];
+  if(withHead){P.push(g.h,"");H.push(`<b><u>${esc(g.h)}</u></b><br><br>`)}
+  g.f.forEach(([k,l,ty])=>{const v=(d.rep?.[k]||"").trim()||"nil";
+    if(ty==="rwy"){P.push(`${l}: ${v}`,"");H.push(`<b>${esc(l)}:</b> ${esc(v)}<br><br>`)}
+    else{P.push(`${l}:`,v,"");H.push(`<b>${esc(l)}:</b><br>${esc(v).replace(/\n/g,"<br>")}<br><br>`)}});
+  return {t:P.join("\n").replace(/\n+$/,""),h:H.join("").replace(/(<br>)+$/,"")}}
+const secText=(d,g)=>secRich(d,g,false);
+function repText(d){const r=RDO.map(g=>secRich(d,g,true));return {t:r.map(x=>x.t).join("\n\n"),h:r.map(x=>x.h).join("<br><br>")}}
+async function copyText(t,label){let ok=false,h=null;if(t&&typeof t==="object"){h=t.h;t=t.t}
+  if(h){try{await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([`<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt">${h}</div>`],{type:"text/html"}),"text/plain":new Blob([t],{type:"text/plain"})})]);ok=true}catch(e){}
+    if(!ok){try{const dv=document.createElement("div");dv.contentEditable="true";dv.innerHTML=h;dv.style.cssText="position:fixed;top:0;left:-9999px;white-space:normal";document.body.appendChild(dv);const r=document.createRange();r.selectNodeContents(dv);const sl=getSelection();sl.removeAllRanges();sl.addRange(r);ok=document.execCommand("copy");sl.removeAllRanges();dv.remove()}catch(e){}}}
+  if(!ok){try{await navigator.clipboard.writeText(t);ok=true}catch(e){}}
   if(!ok){try{const a=document.createElement("textarea");a.value=t;a.setAttribute("readonly","");a.style.cssText="position:fixed;top:0;left:0;opacity:0";document.body.appendChild(a);a.select();a.setSelectionRange(0,t.length);ok=document.execCommand("copy");a.remove()}catch(e){}}
   if(ok){toast(label+" copiado");return}
   mbox.innerHTML=`<h3 id="mt">${esc(label)}</h3><p>Selecione o texto e copie (Ctrl+C, ou tocar sem largar → Copiar).</p><textarea class="cpbox" id="cpb" readonly></textarea><div class="bar" style="justify-content:flex-end"><button class="btn" id="mx">Fechar</button></div>`;
@@ -1038,7 +1047,7 @@ function genKey(){const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789",r=new Uint32Array(1
 $("#lgen").onclick=()=>{$("#lk").value=genKey();$("#lk").type="text";$("#lerr").innerHTML="<span style='color:var(--ink)'>Código criado. <b>Guarde-o</b> (por exemplo nas Notas): vai precisar dele noutros dispositivos e não é possível recuperá-lo.</span>"};
 $("#lf").addEventListener("submit",e=>{e.preventDefault();const k=$("#lk").value.trim().toUpperCase().replace(/\s+/g,"");
   if(k.length<10){$("#lerr").textContent="O código tem de ter pelo menos 10 caracteres.";return}startWith(k)});
-const APPV="41";
+const APPV="42";
 async function rdoPdf(d){try{await loadJs("vendor/jspdf.umd.min.js")}catch(_){toast("Não foi possível criar o PDF");return}
   const {jsPDF}=window.jspdf,doc=new jsPDF({unit:"mm",format:"a4"}),W=210,M=16,CW=W-2*M;let y=0;
   const dt=fromKey(d.date),s=SK[d.shift],dl=dt.toLocaleDateString("pt-PT",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
